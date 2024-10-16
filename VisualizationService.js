@@ -59,22 +59,7 @@ class VisualizationService {
     }
 
     static getVisualizationHTML(policyGroups) {
-        const policyElements = policyGroups.map(group => {
-            const nodeElements = group.map(node => `<div class="node">${node.label}</div>`).join('');
-            const connections = group.map((_, index) => {
-                if (index < group.length - 1) {
-                    return `<div class="arrow"></div>`;
-                }
-                return '';
-            }).join('');
-
-            return `
-                <div class="policy-container">
-                    ${nodeElements}
-                    ${connections}
-                </div>
-            `;
-        }).join('<div class="separator"></div>'); // Separator between different policy groups
+        const chartData = this.prepareChartData(policyGroups);
 
         return `
             <!DOCTYPE html>
@@ -83,6 +68,7 @@ class VisualizationService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -105,51 +91,62 @@ class VisualizationService {
                         margin: 20px auto; /* Centering */
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
-                    .output-box {
-                        background-color: #e6f7ff;
-                        padding: 20px;
-                        border-radius: 5px;
-                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+                    .chart-container {
                         width: 80%; /* Adjust width as necessary */
                         max-width: 800px; /* Maximum width */
                         margin: 20px auto; /* Centering */
-                        margin-top: 10px; /* Gap from header */
-                    }
-                    .node {
-                        background-color: #007bff; /* Blue color for nodes */
-                        color: white;
-                        padding: 20px;
-                        margin: 10px;
-                        border-radius: 5px;
-                        text-align: center;
-                        width: 300px;
-                        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-                    }
-                    .arrow {
-                        width: 2px;
-                        height: 50px;
-                        background-color: #333;
-                        margin: 0 auto;
-                    }
-                    .policy-container {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        margin-bottom: 40px; /* Space between policy groups */
-                    }
-                    .separator {
-                        height: 20px; /* Space between different policy groups */
                     }
                 </style>
             </head>
             <body>
                 <div class="header">Visualize OPA Policy</div>
-                <div class="output-box">
-                    ${policyElements}
+                <div class="chart-container">
+                    <canvas id="policyChart"></canvas>
                 </div>
+                <script>
+                    const ctx = document.getElementById('policyChart').getContext('2d');
+                    const data = ${JSON.stringify(chartData)};
+                    const config = {
+                        type: 'bar', // You can change this type to 'tree', 'bar', etc.
+                        data: data,
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    };
+                    const policyChart = new Chart(ctx, config);
+                </script>
             </body>
             </html>
         `;
+    }
+
+    static prepareChartData(policyGroups) {
+        // Prepare data for Chart.js format, assuming a bar chart for now.
+        const labels = [];
+        const datasets = [];
+
+        policyGroups.forEach(group => {
+            group.forEach(policy => {
+                labels.push(policy.label);
+            });
+        });
+
+        datasets.push({
+            label: 'Policies',
+            data: policyGroups.map(group => group.length),
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        });
+
+        return {
+            labels: labels,
+            datasets: datasets
+        };
     }
 }
 
