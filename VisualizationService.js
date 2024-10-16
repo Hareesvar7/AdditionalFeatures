@@ -94,9 +94,16 @@ class VisualizationService {
                         height: 100vh;
                         margin: 0;
                     }
-                    h1 {
+                    .header {
+                        background-color: #007bff; /* Blue color for header */
+                        color: white;
+                        padding: 10px;
+                        border-radius: 5px;
                         text-align: center;
-                        color: #333;
+                        width: 80%;
+                        max-width: 800px;
+                        margin: 20px auto; /* Centering */
+                        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     .output-box {
                         background-color: #e6f7ff;
@@ -106,6 +113,7 @@ class VisualizationService {
                         width: 80%; /* Adjust width as necessary */
                         max-width: 800px; /* Maximum width */
                         margin: 20px auto; /* Centering */
+                        margin-top: 10px; /* Gap from header */
                     }
                     .node {
                         background-color: #007bff; /* Blue color for nodes */
@@ -132,14 +140,10 @@ class VisualizationService {
                     .separator {
                         height: 20px; /* Space between different policy groups */
                     }
-                    .horizontal {
-                        display: flex;
-                        align-items: flex-start;
-                    }
                 </style>
             </head>
             <body>
-                <h1>Visualize OPA Policy</h1>
+                <div class="header">Visualize OPA Policy</div>
                 <div class="output-box">
                     ${policyElements}
                 </div>
