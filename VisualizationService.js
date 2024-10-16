@@ -1,14 +1,13 @@
 // src/services/VisualizationService.js
 
 const fs = require('fs');
-const path = require('path');
 
 class VisualizationService {
     static async getPolicies(filePath) {
         try {
             // Read the Rego file
             const policies = fs.readFileSync(filePath, 'utf8');
-            // Process the policies into a format suitable for visualization (e.g., JSON)
+            // Process the policies into a format suitable for visualization
             return this.processPolicies(policies);
         } catch (err) {
             console.error("Error reading policies:", err);
@@ -19,7 +18,6 @@ class VisualizationService {
     static processPolicies(policies) {
         const lines = policies.split('\n');
         const nodes = [];
-        const links = [];
         let currentDeny = '';
 
         lines.forEach((line) => {
@@ -34,20 +32,16 @@ class VisualizationService {
             // Check for resource type
             if (currentDeny && trimmedLine.includes('resource')) {
                 const resourceType = this.extractResourceType(trimmedLine);
-                const resourceNode = `Check if resource type is ${resourceType}`;
-                nodes.push({ id: resourceNode, label: resourceNode });
-                links.push({ source: currentDeny, target: resourceNode });
+                nodes.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
             }
 
             // Check for VPC configuration
             if (currentDeny && trimmedLine.includes('not resource.change.after.vpc_configuration')) {
-                const vpcNode = 'Check if VPC configuration exists';
-                nodes.push({ id: vpcNode, label: vpcNode });
-                links.push({ source: currentDeny, target: vpcNode });
+                nodes.push({ id: 'Check if VPC configuration exists', label: 'Check if VPC configuration exists' });
             }
         });
 
-        return { nodes, links };
+        return nodes;
     }
 
     static extractResourceType(line) {
@@ -55,7 +49,15 @@ class VisualizationService {
         return match ? match[1] : 'unknown';
     }
 
-    static getVisualizationHTML(policyData) {
+    static getVisualizationHTML(nodes) {
+        const nodeElements = nodes.map(node => `<div class="node">${node.label}</div>`).join('');
+        const connections = nodes.map((node, index) => {
+            if (index < nodes.length - 1) {
+                return `<div class="arrow"></div>`;
+            }
+            return '';
+        }).join('');
+
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -64,76 +66,45 @@ class VisualizationService {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
                 <style>
-                    #graph { width: 100%; height: 500px; }
+                    body {
+                        font-family: Arial, sans-serif;
+                        background-color: #f4f4f4;
+                        display: flex;
+                        justify-content: center;
+                        align-items: flex-start;
+                        flex-direction: column;
+                        height: 100vh;
+                        margin: 0;
+                    }
+                    .node {
+                        background-color: #4caf50;
+                        color: white;
+                        padding: 20px;
+                        margin: 20px;
+                        border-radius: 5px;
+                        text-align: center;
+                        width: 300px;
+                        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+                    }
+                    .arrow {
+                        width: 2px;
+                        height: 50px;
+                        background-color: #333;
+                        margin: 0 auto;
+                    }
+                    .container {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                    }
                 </style>
-                <!-- Load D3.js from a CDN -->
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.min.js"></script>
             </head>
             <body>
                 <h1>OPA Policy Visualization</h1>
-                <div id="graph"></div>
-                <script>
-                    const nodes = ${JSON.stringify(policyData.nodes)};
-                    const links = ${JSON.stringify(policyData.links)};
-
-                    const width = 800, height = 500;
-                    const svg = d3.select("#graph").append("svg")
-                        .attr("width", width)
-                        .attr("height", height);
-
-                    const simulation = d3.forceSimulation(nodes)
-                        .force("link", d3.forceLink().id(d => d.id).distance(50))
-                        .force("charge", d3.forceManyBody())
-                        .force("center", d3.forceCenter(width / 2, height / 2));
-
-                    const link = svg.append("g")
-                        .selectAll("line")
-                        .data(links)
-                        .enter().append("line")
-                        .attr("stroke-width", 2);
-
-                    const node = svg.append("g")
-                        .selectAll("circle")
-                        .data(nodes)
-                        .enter().append("circle")
-                        .attr("r", 5)
-                        .attr("fill", "blue")
-                        .call(d3.drag()
-                            .on("start", dragstarted)
-                            .on("drag", dragged)
-                            .on("end", dragended));
-
-                    node.append("title").text(d => d.label);
-
-                    simulation.on("tick", () => {
-                        link
-                            .attr("x1", d => d.source.x)
-                            .attr("y1", d => d.source.y)
-                            .attr("x2", d => d.target.x)
-                            .attr("y2", d => d.target.y);
-
-                        node
-                            .attr("cx", d => d.x)
-                            .attr("cy", d => d.y);
-                    });
-
-                    function dragstarted(event, d) {
-                        if (!event.active) simulation.alphaTarget(0.3).restart();
-                        d.fx = d.x;
-                        d.fy = d.y;
-                    }
-
-                    function dragged(event, d) {
-                        d.fx = event.x;
-                        d.fy = event.y;
-                    }
-
-                    function dragended(event, d) {
-                        if (!event.active) simulation.alphaTarget(0);
-                        d.fx = null;
-                        d.fy = null;
-                    }
-                </script>
+                <div class="container">
+                    ${nodeElements}
+                    ${connections}
+                </div>
             </body>
             </html>
         `;
