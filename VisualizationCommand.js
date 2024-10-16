@@ -3,7 +3,7 @@
 const vscode = require('vscode');
 const VisualizationService = require('../services/VisualizationService');
 
-async function visualizePolicies() {
+async function visualizePolicies(context) {
     // Prompt user to select a .rego file
     const fileUri = await vscode.window.showOpenDialog({
         canSelectMany: false,
