@@ -14,7 +14,7 @@ class VisualizationService {
         }
     }
 
-    // Process policies dynamically based on specific keywords
+    // Process policies dynamically based on keywords like deny, allow, resource.type, etc.
     static processPolicies(policies) {
         const lines = policies.split('\n');
         const policyGroups = [];
@@ -31,11 +31,40 @@ class VisualizationService {
                     currentPolicy = [];
                 }
                 currentRule = trimmedLine.split('{')[0].trim();
-                currentPolicy.push({ id: currentRule, label: `${currentRule} - Policy rule` });
+                currentPolicy.push({ id: currentRule, label: currentRule });
             }
 
-            // Track specific keywords related to OPA policies
-            this.trackKeywords(trimmedLine, currentPolicy);
+            // Detect resource change type
+            if (trimmedLine.includes('resource_change.type')) {
+                const resourceType = this.extractResourceType(trimmedLine);
+                if (resourceType !== 'unknown') {
+                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Check resource type: ${resourceType}` });
+                }
+            }
+
+            // Detect change after and before
+            if (trimmedLine.includes('resource_change.change.after')) {
+                currentPolicy.push({ id: 'Change After', label: 'Evaluate change after' });
+            }
+            if (trimmedLine.includes('resource_change.change.before')) {
+                currentPolicy.push({ id: 'Change Before', label: 'Evaluate change before' });
+            }
+
+            // Detect not condition
+            if (trimmedLine.includes('not')) {
+                currentPolicy.push({ id: 'Not Condition', label: 'Check not condition' });
+            }
+
+            // Detect message
+            if (trimmedLine.includes('msg')) {
+                const message = this.extractMessage(trimmedLine);
+                currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}` });
+            }
+
+            // Detect other conditions dynamically
+            if (trimmedLine.includes('input.')) {
+                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Check condition: ${trimmedLine}` });
+            }
         });
 
         if (currentPolicy.length) {
@@ -45,28 +74,14 @@ class VisualizationService {
         return policyGroups;
     }
 
-    // Track specified keywords and provide more descriptive information
-    static trackKeywords(line, currentPolicy) {
-        const keywords = {
-            package: 'Package Declaration',
-            deny: 'Deny Rule',
-            allow: 'Allow Rule',
-            resource_change: 'Resource Change Evaluation',
-            'resource_change.type': 'Resource Change Type Evaluation',
-            'resource_change.change.after': 'New State After Change',
-            'resource_change.change.before': 'Previous State Before Change',
-            not: 'Logical NOT Condition',
-            msg: 'Message Evaluation',
-            policy: 'Policy Evaluation'
-        };
+    static extractResourceType(line) {
+        const match = line.match(/resource_change\.type == "(.*?)"/);
+        return match ? match[1] : 'unknown';
+    }
 
-        for (const [key, description] of Object.entries(keywords)) {
-            if (line.includes(key)) {
-                // Create a more descriptive label for the policy condition
-                const additionalInfo = line.split(key)[1] ? `: ${line.split(key)[1].trim()}` : '';
-                currentPolicy.push({ id: `${key} Check`, label: `${description}${additionalInfo}` });
-            }
-        }
+    static extractMessage(line) {
+        const match = line.match(/msg == "(.*?)"/);
+        return match ? match[1] : 'unknown';
     }
 
     // Generate HTML for visualization with Go.js
@@ -104,12 +119,14 @@ class VisualizationService {
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     #policyDiagram {
-                        width: 80%;
+                        width: 90%; /* Increased width to reduce scrolling */
                         height: 600px;
-                        max-width: 800px;
+                        max-width: 1000px; /* Adjusted max width */
                         margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
+                        overflow: auto; /* Allow for scrolling if needed */
+                        padding: 10px; /* Add padding for better spacing */
                     }
                 </style>
             </head>
@@ -121,14 +138,14 @@ class VisualizationService {
                     const $ = go.GraphObject.make;
 
                     const myDiagram = $(go.Diagram, "policyDiagram", {
-                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 35 })
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 50 }) // Increased layer spacing for separation
                     });
 
                     myDiagram.nodeTemplate =
                         $(go.Node, "Horizontal",
-                            { background: "#007bff", padding: 10 },
+                            { background: "#007bff", padding: 5 }, // Reduced padding for compactness
                             $(go.TextBlock, "Default Text",
-                                { margin: 10, stroke: "white", font: "bold 16px sans-serif" },
+                                { margin: 5, stroke: "white", font: "bold 14px sans-serif" }, // Reduced font size for nodes
                                 new go.Binding("text", "label"))
                         );
 
