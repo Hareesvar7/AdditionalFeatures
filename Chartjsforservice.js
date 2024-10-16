@@ -38,24 +38,24 @@ class VisualizationService {
             if (trimmedLine.includes('resource_change.type')) {
                 const resourceType = this.extractResourceType(trimmedLine);
                 if (resourceType !== 'unknown') {
-                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Check resource type: ${resourceType}` });
+                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Resource Type: ${resourceType}` });
                 }
             }
 
             // Detect change after and before
             if (trimmedLine.includes('resource_change.change.after')) {
-                currentPolicy.push({ id: 'Change After', label: 'Evaluate change after' });
+                currentPolicy.push({ id: 'Change After', label: 'Evaluating Change After' });
             }
             if (trimmedLine.includes('resource_change.change.before')) {
-                currentPolicy.push({ id: 'Change Before', label: 'Evaluate change before' });
+                currentPolicy.push({ id: 'Change Before', label: 'Evaluating Change Before' });
             }
 
             // Detect not condition
             if (trimmedLine.includes('not')) {
-                currentPolicy.push({ id: 'Not Condition', label: 'Check not condition' });
+                currentPolicy.push({ id: 'Not Condition', label: 'Not Condition Applied' });
             }
 
-            // Detect message
+            // Detect message with dynamic content
             if (trimmedLine.includes('msg')) {
                 const message = this.extractMessage(trimmedLine);
                 currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}` });
@@ -63,7 +63,7 @@ class VisualizationService {
 
             // Detect other conditions dynamically
             if (trimmedLine.includes('input.')) {
-                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Check condition: ${trimmedLine}` });
+                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Condition: ${trimmedLine}` });
             }
         });
 
@@ -119,14 +119,14 @@ class VisualizationService {
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     #policyDiagram {
-                        width: 90%; /* Increased width to reduce scrolling */
+                        width: 90%; /* Increased width to fit content better */
                         height: 600px;
                         max-width: 1000px; /* Adjusted max width */
                         margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
-                        overflow: auto; /* Allow for scrolling if needed */
                         padding: 10px; /* Add padding for better spacing */
+                        overflow: hidden; /* Hide scrollbar */
                     }
                 </style>
             </head>
@@ -143,11 +143,19 @@ class VisualizationService {
 
                     myDiagram.nodeTemplate =
                         $(go.Node, "Horizontal",
-                            { background: "#007bff", padding: 5 }, // Reduced padding for compactness
+                            { padding: 5 }, // Reduced padding for compactness
                             $(go.TextBlock, "Default Text",
-                                { margin: 5, stroke: "white", font: "bold 14px sans-serif" }, // Reduced font size for nodes
-                                new go.Binding("text", "label"))
+                                { margin: 5, font: "bold 14px sans-serif" }, // Reduced font size for nodes
+                                new go.Binding("text", "label"),
+                                new go.Binding("background", "color") // Bind color to background
+                            )
                         );
+
+                    // Assign colors alternately for each policy group
+                    const colors = ['#007bff', '#ff69b4']; // Blue and Pink
+                    treeData.forEach((node, index) => {
+                        node.color = colors[index % colors.length]; // Alternate colors
+                    });
 
                     myDiagram.linkTemplate =
                         $(go.Link,
