@@ -35,9 +35,11 @@ class VisualizationService {
             }
 
             // Check for resource type
-            if (currentDeny && trimmedLine.includes('resource')) {
+            if (currentDeny) {
                 const resourceType = this.extractResourceType(trimmedLine);
-                currentPolicy.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+                if (resourceType) {
+                    currentPolicy.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+                }
             }
 
             // Check for VPC configuration
@@ -55,7 +57,7 @@ class VisualizationService {
 
     static extractResourceType(line) {
         const match = line.match(/resource\.type == "(.*?)"/);
-        return match ? match[1] : 'unknown';
+        return match ? match[1] : null; // Return null instead of 'unknown'
     }
 
     static getVisualizationHTML(policyGroups) {
