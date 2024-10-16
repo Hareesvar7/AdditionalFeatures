@@ -1,7 +1,6 @@
 // src/services/VisualizationService.js
 
 const fs = require('fs');
-const path = require('path');
 
 class VisualizationService {
     static async getPolicies(filePath) {
@@ -16,17 +15,16 @@ class VisualizationService {
     }
 
     static processPolicies(policies) {
-        // Convert policies into a format suitable for visualization (e.g., nodes/links for graphs)
+        // Example processing logic
         const processedData = {
             nodes: [],
             links: []
         };
 
-        // Example: logic to parse the policies and fill nodes and links
         const lines = policies.split('\n');
         lines.forEach((line, index) => {
             const nodeId = `node${index}`;
-            processedData.nodes.push({ id: nodeId, label: line });
+            processedData.nodes.push({ id: nodeId, label: line.trim() });
             if (index > 0) {
                 processedData.links.push({ source: `node${index - 1}`, target: nodeId });
             }
