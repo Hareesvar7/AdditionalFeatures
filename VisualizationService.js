@@ -14,40 +14,53 @@ class VisualizationService {
         }
     }
 
+    // Process policies dynamically based on keywords like deny, allow, resource.type, etc.
     static processPolicies(policies) {
         const lines = policies.split('\n');
         const policyGroups = [];
         let currentPolicy = [];
+        let currentRule = '';
 
         lines.forEach((line) => {
             const trimmedLine = line.trim();
 
-            // Identify deny statements and start new policy group
-            if (trimmedLine.startsWith('deny')) {
+            // Detect and start a new deny/allow rule
+            if (trimmedLine.startsWith('deny') || trimmedLine.startsWith('allow')) {
                 if (currentPolicy.length) {
                     policyGroups.push(currentPolicy);
                     currentPolicy = [];
                 }
-                currentPolicy.push({ id: trimmedLine, label: `Policy: ${trimmedLine}` });
+                currentRule = trimmedLine.split('{')[0].trim();
+                currentPolicy.push({ id: currentRule, label: currentRule });
             }
 
-            // Check for resource type and add it to current policy
+            // Detect resource type
             if (trimmedLine.includes('resource.type ==')) {
                 const resourceType = this.extractResourceType(trimmedLine);
                 if (resourceType !== 'unknown') {
-                    currentPolicy.push({ id: `Check resource type: ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Check if resource type is ${resourceType}` });
                 }
             }
 
-            // Check for specific conditions like VPC
-            if (trimmedLine.includes('vpc_configuration')) {
-                currentPolicy.push({ id: 'Check VPC configuration', label: 'Check if VPC configuration exists' });
+            // Detect message
+            if (trimmedLine.includes('message')) {
+                const message = this.extractMessage(trimmedLine);
+                currentPolicy.push({ id: `Message: ${message}`, label: `Show message: ${message}` });
             }
 
-            // Add other conditions or checks dynamically
+            // Detect other conditions dynamically
+            if (trimmedLine.includes('input.')) {
+                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Check condition: ${trimmedLine}` });
+            }
+
+            // Detect custom checks (e.g., VPC configurations, actions, etc.)
+            if (trimmedLine.includes('vpc_configuration')) {
+                currentPolicy.push({ id: 'VPC Check', label: 'Check if VPC configuration exists' });
+            }
+
             if (trimmedLine.includes('action ==')) {
                 const action = this.extractAction(trimmedLine);
-                currentPolicy.push({ id: `Check action: ${action}`, label: `Check if action is ${action}` });
+                currentPolicy.push({ id: `Action: ${action}`, label: `Check if action is ${action}` });
             }
         });
 
@@ -63,11 +76,17 @@ class VisualizationService {
         return match ? match[1] : 'unknown';
     }
 
+    static extractMessage(line) {
+        const match = line.match(/message == "(.*?)"/);
+        return match ? match[1] : 'unknown';
+    }
+
     static extractAction(line) {
         const match = line.match(/action == "(.*?)"/);
         return match ? match[1] : 'unknown';
     }
 
+    // Generate HTML for visualization with Go.js
     static getVisualizationHTML(policyGroups) {
         const treeData = this.prepareTreeData(policyGroups);
 
@@ -143,6 +162,7 @@ class VisualizationService {
         `;
     }
 
+    // Prepare tree data for Go.js visualization
     static prepareTreeData(policyGroups) {
         const nodes = [];
         let keyCounter = 0;
