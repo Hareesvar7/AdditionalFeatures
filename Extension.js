@@ -2,7 +2,7 @@ const vscode = require('vscode');
 const { showCloudServiceSelection } = require('./commands/cloudServiceSelection');
 const { validateOPA } = require('./commands/Opavalidate');
 const { aiAssist } = require('./commands/Aiassist');
-const { visualizePolicies } = require('./commands/visualizePolicies'); // Ensure this file exists
+const { visualizePolicies } = require('./commands/visualization'); // Ensure this file exists
 
 function activate(context) {
     console.log('Extension "PolicyPilot" is now active!');
