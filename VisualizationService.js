@@ -1,5 +1,3 @@
-// src/services/VisualizationService.js
-
 const fs = require('fs');
 
 class VisualizationService {
@@ -20,7 +18,7 @@ class VisualizationService {
         const links = [];
         let currentDeny = '';
 
-        lines.forEach((line, index) => {
+        lines.forEach((line) => {
             const trimmedLine = line.trim();
 
             // Capture deny statements
@@ -54,7 +52,6 @@ class VisualizationService {
     }
 
     static getVisualizationHTML(policyData) {
-        // HTML structure for webview visualization
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -80,7 +77,7 @@ class VisualizationService {
                         .attr("height", height);
 
                     const simulation = d3.forceSimulation(nodes)
-                        .force("link", d3.forceLink(links).id(d => d.id))
+                        .force("link", d3.forceLink().id(d => d.id).distance(50))
                         .force("charge", d3.forceManyBody())
                         .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -96,12 +93,10 @@ class VisualizationService {
                         .enter().append("circle")
                         .attr("r", 5)
                         .attr("fill", "blue")
-                        .on("mouseover", function(event, d) {
-                            d3.select(this).attr("fill", "orange");
-                        })
-                        .on("mouseout", function(event, d) {
-                            d3.select(this).attr("fill", "blue");
-                        });
+                        .call(d3.drag()
+                            .on("start", dragstarted)
+                            .on("drag", dragged)
+                            .on("end", dragended));
 
                     node.append("title").text(d => d.label);
 
@@ -116,6 +111,23 @@ class VisualizationService {
                             .attr("cx", d => d.x)
                             .attr("cy", d => d.y);
                     });
+
+                    function dragstarted(event, d) {
+                        if (!event.active) simulation.alphaTarget(0.3).restart();
+                        d.fx = d.x;
+                        d.fy = d.y;
+                    }
+
+                    function dragged(event, d) {
+                        d.fx = event.x;
+                        d.fy = event.y;
+                    }
+
+                    function dragended(event, d) {
+                        if (!event.active) simulation.alphaTarget(0);
+                        d.fx = null;
+                        d.fy = null;
+                    }
                 </script>
             </body>
             </html>
