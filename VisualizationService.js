@@ -14,7 +14,7 @@ class VisualizationService {
         }
     }
 
-    // Process policies dynamically based on keywords like deny, allow, resource.type, etc.
+    // Process policies dynamically based on keywords
     static processPolicies(policies) {
         const lines = policies.split('\n');
         const policyGroups = [];
@@ -34,34 +34,8 @@ class VisualizationService {
                 currentPolicy.push({ id: currentRule, label: currentRule });
             }
 
-            // Detect resource type
-            if (trimmedLine.includes('resource.type ==')) {
-                const resourceType = this.extractResourceType(trimmedLine);
-                if (resourceType !== 'unknown') {
-                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Check if resource type is ${resourceType}` });
-                }
-            }
-
-            // Detect message
-            if (trimmedLine.includes('message')) {
-                const message = this.extractMessage(trimmedLine);
-                currentPolicy.push({ id: `Message: ${message}`, label: `Show message: ${message}` });
-            }
-
-            // Detect other conditions dynamically
-            if (trimmedLine.includes('input.')) {
-                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Check condition: ${trimmedLine}` });
-            }
-
-            // Detect custom checks (e.g., VPC configurations, actions, etc.)
-            if (trimmedLine.includes('vpc_configuration')) {
-                currentPolicy.push({ id: 'VPC Check', label: 'Check if VPC configuration exists' });
-            }
-
-            if (trimmedLine.includes('action ==')) {
-                const action = this.extractAction(trimmedLine);
-                currentPolicy.push({ id: `Action: ${action}`, label: `Check if action is ${action}` });
-            }
+            // Detect various keywords related to cloud services
+            this.trackKeywords(trimmedLine, currentPolicy);
         });
 
         if (currentPolicy.length) {
@@ -71,19 +45,41 @@ class VisualizationService {
         return policyGroups;
     }
 
-    static extractResourceType(line) {
-        const match = line.match(/resource\.type == "(.*?)"/);
-        return match ? match[1] : 'unknown';
-    }
+    // Track keywords dynamically
+    static trackKeywords(line, currentPolicy) {
+        const keywords = {
+            deny: 'Deny access',
+            allow: 'Allow access',
+            resource: 'Resource evaluation',
+            input: 'Input data evaluation',
+            change: 'Resource changes',
+            after: 'New resource state',
+            before: 'Previous resource state',
+            target: 'Evaluating target',
+            vpc_configuration: 'VPC configuration check',
+            type: 'Resource type check',
+            tags: 'Resource tagging',
+            name: 'Resource name evaluation',
+            environment: 'Environment context',
+            policy: 'Policy evaluation',
+            attribute: 'Attribute check',
+            compliance: 'Compliance verification',
+            assertion: 'Assertion validation',
+            data: 'External data reference',
+            'input.resource_changes': 'Resource changes evaluation',
+            evaluation: 'Resource evaluation process',
+            violation: 'Policy violation detected',
+            principal: 'Principal evaluation',
+            operation: 'Resource operation evaluation',
+            computation: 'Computation of values',
+            regulation: 'Regulatory compliance check'
+        };
 
-    static extractMessage(line) {
-        const match = line.match(/message == "(.*?)"/);
-        return match ? match[1] : 'unknown';
-    }
-
-    static extractAction(line) {
-        const match = line.match(/action == "(.*?)"/);
-        return match ? match[1] : 'unknown';
+        for (const [key, description] of Object.entries(keywords)) {
+            if (line.includes(key)) {
+                currentPolicy.push({ id: `${key} Check`, label: description });
+            }
+        }
     }
 
     // Generate HTML for visualization with Go.js
