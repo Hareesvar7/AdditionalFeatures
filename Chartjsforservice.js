@@ -102,7 +102,7 @@ class VisualizationService {
                         background-color: #f4f4f4;
                         display: flex;
                         justify-content: center;
-                        align-items: flex-start;
+                        align-items: center;
                         flex-direction: column;
                         height: 100vh;
                         margin: 0;
@@ -119,13 +119,14 @@ class VisualizationService {
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     #policyDiagram {
-                        width: 90%; /* Increased width */
+                        width: 90%;
                         height: 600px;
-                        max-width: 1000px; /* Adjusted max width */
+                        max-width: 1000px;
                         margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
-                        padding: 10px; /* Add padding for better spacing */
+                        padding: 10px;
+                        overflow: hidden; /* Removed scrollbar */
                     }
                 </style>
             </head>
@@ -137,14 +138,15 @@ class VisualizationService {
                     const $ = go.GraphObject.make;
 
                     const myDiagram = $(go.Diagram, "policyDiagram", {
-                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 100 }) // Increased layer spacing for more space between policies
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 30 }) // Adjusted layer spacing for smaller gaps
                     });
 
                     myDiagram.nodeTemplate =
                         $(go.Node, "Horizontal",
-                            { background: "#007bff", padding: 5 }, // Reduced padding for compactness
+                            { padding: 5 },
+                            new go.Binding("background", "color"), // Bind node color to a property
                             $(go.TextBlock, "Default Text",
-                                { margin: 5, stroke: "white", font: "bold 14px sans-serif" }, // Adjust font size for nodes
+                                { margin: 5, stroke: "white", font: "bold 14px sans-serif" },
                                 new go.Binding("text", "label"))
                         );
 
@@ -166,12 +168,13 @@ class VisualizationService {
         const nodes = [];
         let keyCounter = 0;
 
-        policyGroups.forEach(group => {
+        policyGroups.forEach((group, groupIndex) => {
+            const color = groupIndex % 2 === 0 ? "#ffcccb" : "#add8e6"; // Alternate colors for policies
             group.forEach((policy, index) => {
                 if (index === 0) {
-                    nodes.push({ key: keyCounter++, label: policy.label });
+                    nodes.push({ key: keyCounter++, label: policy.label, color: color });
                 } else {
-                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label });
+                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label, color: color });
                 }
             });
         });
