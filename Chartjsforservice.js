@@ -14,7 +14,7 @@ class VisualizationService {
         }
     }
 
-    // Process policies dynamically based on keywords like deny, allow, resource.type, etc.
+    // Process policies dynamically based on keywords
     static processPolicies(policies) {
         const lines = policies.split('\n');
         const policyGroups = [];
@@ -55,13 +55,13 @@ class VisualizationService {
                 currentPolicy.push({ id: 'Not Condition', label: 'Not Condition Applied' });
             }
 
-            // Detect message with dynamic content
+            // Detect message
             if (trimmedLine.includes('msg')) {
                 const message = this.extractMessage(trimmedLine);
                 currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}` });
             }
 
-            // Detect other conditions dynamically
+            // Detect other conditions
             if (trimmedLine.includes('input.')) {
                 currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Condition: ${trimmedLine}` });
             }
@@ -87,6 +87,7 @@ class VisualizationService {
     // Generate HTML for visualization with Go.js
     static getVisualizationHTML(policyGroups) {
         const treeData = this.prepareTreeData(policyGroups);
+        console.log("Tree Data:", treeData); // Log tree data for debugging
 
         return `
             <!DOCTYPE html>
@@ -119,13 +120,13 @@ class VisualizationService {
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     #policyDiagram {
-                        width: 90%; /* Increased width to fit content better */
+                        width: 90%; /* Increased width */
                         height: 600px;
-                        max-width: 1000px; /* Adjusted max width */
+                        max-width: 1000px;
                         margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
-                        padding: 10px; /* Add padding for better spacing */
+                        padding: 10px;
                         overflow: hidden; /* Hide scrollbar */
                     }
                 </style>
@@ -138,14 +139,14 @@ class VisualizationService {
                     const $ = go.GraphObject.make;
 
                     const myDiagram = $(go.Diagram, "policyDiagram", {
-                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 50 }) // Increased layer spacing for separation
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 50 }) // Adjust layer spacing
                     });
 
                     myDiagram.nodeTemplate =
                         $(go.Node, "Horizontal",
-                            { padding: 5 }, // Reduced padding for compactness
+                            { padding: 5 },
                             $(go.TextBlock, "Default Text",
-                                { margin: 5, font: "bold 14px sans-serif" }, // Reduced font size for nodes
+                                { margin: 5, font: "bold 14px sans-serif", stroke: "white" }, // Adjust styles
                                 new go.Binding("text", "label"),
                                 new go.Binding("background", "color") // Bind color to background
                             )
@@ -163,7 +164,12 @@ class VisualizationService {
                             $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
                         );
 
-                    myDiagram.model = new go.TreeModel(${JSON.stringify(treeData)});
+                    // Check if treeData has nodes to render
+                    if (treeData.length > 0) {
+                        myDiagram.model = new go.TreeModel(treeData);
+                    } else {
+                        console.warn("No data to render.");
+                    }
                 </script>
             </body>
             </html>
