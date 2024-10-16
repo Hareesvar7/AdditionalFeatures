@@ -1,7 +1,6 @@
 // src/services/VisualizationService.js
 
 const fs = require('fs');
-const path = require('path');
 
 class VisualizationService {
     static async getPolicies(filePath) {
@@ -16,30 +15,42 @@ class VisualizationService {
     }
 
     static processPolicies(policies) {
-        // Split the policies into lines for processing
         const lines = policies.split('\n');
         const nodes = [];
         const links = [];
-        
+        let currentDeny = '';
+
         lines.forEach((line, index) => {
             const trimmedLine = line.trim();
 
+            // Capture deny statements
             if (trimmedLine.startsWith('deny')) {
-                const denyMsg = trimmedLine.split('{')[0].trim(); // Get the deny message
-                nodes.push({ id: denyMsg, label: denyMsg });
-                if (lines[index + 1]) {
-                    const nextLine = lines[index + 1].trim();
-                    if (nextLine.startsWith('resource')) {
-                        nodes.push({ id: 'Check Resource Type', label: 'Check Resource Type' });
-                        links.push({ source: denyMsg, target: 'Check Resource Type' });
-                    }
-                }
+                currentDeny = trimmedLine.split('{')[0].trim(); // Get the deny message
+                nodes.push({ id: currentDeny, label: currentDeny });
             }
 
-            // Additional parsing logic can be added here for other rules
+            // Check for resource type
+            if (currentDeny && trimmedLine.includes('resource')) {
+                const resourceType = this.extractResourceType(trimmedLine);
+                const resourceNode = `Check if resource type is ${resourceType}`;
+                nodes.push({ id: resourceNode, label: resourceNode });
+                links.push({ source: currentDeny, target: resourceNode });
+            }
+
+            // Check for VPC configuration
+            if (currentDeny && trimmedLine.includes('not resource.change.after.vpc_configuration')) {
+                const vpcNode = 'Check if VPC configuration exists';
+                nodes.push({ id: vpcNode, label: vpcNode });
+                links.push({ source: currentDeny, target: vpcNode });
+            }
         });
 
         return { nodes, links };
+    }
+
+    static extractResourceType(line) {
+        const match = line.match(/resource.type == "(.*?)"/);
+        return match ? match[1] : "Unknown Resource Type";
     }
 
     static getVisualizationHTML(policyData) {
@@ -63,7 +74,6 @@ class VisualizationService {
                     const nodes = ${JSON.stringify(policyData.nodes)};
                     const links = ${JSON.stringify(policyData.links)};
 
-                    // Use D3.js to render the graph
                     const width = 800, height = 500;
                     const svg = d3.select("#graph").append("svg")
                         .attr("width", width)
@@ -85,7 +95,13 @@ class VisualizationService {
                         .data(nodes)
                         .enter().append("circle")
                         .attr("r", 5)
-                        .attr("fill", "blue");
+                        .attr("fill", "blue")
+                        .on("mouseover", function(event, d) {
+                            d3.select(this).attr("fill", "orange");
+                        })
+                        .on("mouseout", function(event, d) {
+                            d3.select(this).attr("fill", "blue");
+                        });
 
                     node.append("title").text(d => d.label);
 
