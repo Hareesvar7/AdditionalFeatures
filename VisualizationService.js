@@ -5,9 +5,7 @@ const fs = require('fs');
 class VisualizationService {
     static async getPolicies(filePath) {
         try {
-            // Read the Rego file
             const policies = fs.readFileSync(filePath, 'utf8');
-            // Process the policies into a format suitable for visualization
             return this.processPolicies(policies);
         } catch (err) {
             console.error("Error reading policies:", err);
@@ -17,40 +15,23 @@ class VisualizationService {
 
     static processPolicies(policies) {
         const lines = policies.split('\n');
-        const policyGroups = [];
-        let currentDeny = '';
-        let currentPolicy = [];
+        const policyData = [];
 
         lines.forEach((line) => {
             const trimmedLine = line.trim();
 
-            // Capture deny statements
             if (trimmedLine.startsWith('deny')) {
-                if (currentPolicy.length) {
-                    policyGroups.push(currentPolicy);
-                    currentPolicy = [];
-                }
-                currentDeny = trimmedLine.split('{')[0].trim(); // Get the deny message
-                currentPolicy.push({ id: currentDeny, label: currentDeny });
-            }
-
-            // Check for resource type
-            if (currentDeny && trimmedLine.includes('resource')) {
+                policyData.push({ action: 'Deny', label: trimmedLine });
+            } else if (trimmedLine.startsWith('allow')) {
+                policyData.push({ action: 'Allow', label: trimmedLine });
+            } else if (trimmedLine.includes('resource.type')) {
                 const resourceType = this.extractResourceType(trimmedLine);
-                currentPolicy.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+                policyData.push({ action: 'Resource Type', label: resourceType });
             }
-
-            // Check for VPC configuration
-            if (currentDeny && trimmedLine.includes('not resource.change.after.vpc_configuration')) {
-                currentPolicy.push({ id: 'Check if VPC configuration exists', label: 'Check if VPC configuration exists' });
-            }
+            // Additional parsing can go here
         });
 
-        if (currentPolicy.length) {
-            policyGroups.push(currentPolicy);
-        }
-
-        return policyGroups;
+        return policyData;
     }
 
     static extractResourceType(line) {
@@ -58,24 +39,10 @@ class VisualizationService {
         return match ? match[1] : 'unknown';
     }
 
-    static getVisualizationHTML(policyGroups) {
-        const policyElements = policyGroups.map(group => {
-            const nodeElements = group.map(node => `<div id="${node.id}" class="node">${node.label}</div>`).join('');
-            const connections = group.map((_, index) => {
-                if (index < group.length - 1) {
-                    return `<div class="arrow"></div>`;
-                }
-                return '';
-            }).join('');
-
-            return `
-                <div class="policy-container">
-                    ${nodeElements}
-                    ${connections}
-                </div>
-            `;
-        }).join('<div class="separator"></div>'); // Separator between different policy groups
-
+    static getVisualizationHTML(policyData) {
+        const labels = policyData.map(item => item.label);
+        const actions = policyData.map(item => item.action);
+        
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -83,90 +50,65 @@ class VisualizationService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
-                <link href="https://cdnjs.cloudflare.com/ajax/libs/jsplumb/2.15.6/jsplumb.css" rel="stylesheet">
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/jsplumb/2.15.6/jsplumb.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
                         background-color: #f4f4f4;
                         display: flex;
-                        justify-content: center;
-                        align-items: flex-start;
                         flex-direction: column;
-                        height: 100vh;
-                        margin: 0;
+                        align-items: center;
+                    }
+                    .chart-container {
+                        width: 80%;
+                        max-width: 800px;
+                        margin-top: 20px;
                     }
                     .header {
-                        background-color: #007bff; /* Blue color for header */
+                        background-color: #007bff;
                         color: white;
                         padding: 10px;
                         border-radius: 5px;
                         text-align: center;
-                        width: 80%;
-                        max-width: 800px;
-                        margin: 20px auto; /* Centering */
-                        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-                    }
-                    .output-box {
-                        background-color: #e6f7ff;
-                        padding: 20px;
-                        border-radius: 5px;
-                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-                        width: 80%; /* Adjust width as necessary */
-                        max-width: 800px; /* Maximum width */
-                        margin: 20px auto; /* Centering */
-                        margin-top: 10px; /* Gap from header */
-                    }
-                    .node {
-                        background-color: #007bff; /* Blue color for nodes */
-                        color: white;
-                        padding: 20px;
-                        margin: 10px;
-                        border-radius: 5px;
-                        text-align: center;
-                        width: 300px;
-                        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-                        position: relative; /* Relative positioning for jsPlumb */
-                    }
-                    .arrow {
-                        width: 2px;
-                        height: 50px;
-                        background-color: #333;
-                        margin: 0 auto;
-                    }
-                    .policy-container {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        margin-bottom: 40px; /* Space between policy groups */
-                    }
-                    .separator {
-                        height: 20px; /* Space between different policy groups */
+                        width: 100%;
+                        margin: 20px 0;
                     }
                 </style>
             </head>
             <body>
                 <div class="header">Visualize OPA Policy</div>
-                <div class="output-box" id="output-box">
-                    ${policyElements}
+                <div class="chart-container">
+                    <canvas id="policyChart"></canvas>
                 </div>
                 <script>
-                    jsPlumb.ready(function() {
-                        const instance = jsPlumb.getInstance({
-                            Container: "output-box"
-                        });
-
-                        // Add endpoints and connections
-                        const nodeIds = ${JSON.stringify(policyGroups.map(group => group.map(node => node.id).join(',')))};
-
-                        nodeIds.forEach(group => {
-                            group.split(',').forEach((nodeId, index) => {
-                                instance.addEndpoint(nodeId, { anchor: "Continuous", isSource: true, isTarget: true });
-                                if (index < group.length - 1) {
-                                    instance.connect({ source: group[index], target: group[index + 1] });
+                    const ctx = document.getElementById('policyChart').getContext('2d');
+                    const policyChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ${JSON.stringify(labels)},
+                            datasets: [{
+                                label: 'Policy Actions',
+                                data: ${JSON.stringify(actions.map(action => action === 'Deny' ? 1 : action === 'Allow' ? 1 : 0))},
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.2)',
+                                    'rgba(54, 162, 235, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
                                 }
-                            });
-                        });
+                            }
+                        }
                     });
                 </script>
             </body>
