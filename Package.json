@@ -1,0 +1,51 @@
+{
+    "name": "policyPilot",
+    "displayName": "PolicyPilot",
+    "description": "A tool for managing OPA policies with cloud service selection, validation, AI assistance, and visualization features.",
+    "version": "0.0.1",
+    "publisher": "your_name",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "activationEvents": [
+        "onCommand:policyPilot.showCloudServiceSelection",
+        "onCommand:policyPilot.validateOPA",
+        "onCommand:policyPilot.aiAssist",
+        "onCommand:policyPilot.visualizePolicies"
+    ],
+    "main": "./Extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "policyPilot.showCloudServiceSelection",
+                "title": "Show Cloud Service Selection"
+            },
+            {
+                "command": "policyPilot.validateOPA",
+                "title": "Validate OPA Policies"
+            },
+            {
+                "command": "policyPilot.aiAssist",
+                "title": "AI Assist"
+            },
+            {
+                "command": "policyPilot.visualizePolicies",
+                "title": "Visualize Policies"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./out/extension.js"
+    },
+    "devDependencies": {
+        "typescript": "^4.4.4",
+        "@types/node": "^16.9.1",
+        "@types/vscode": "^1.60.0"
+    },
+    "dependencies": {
+        // Add any additional dependencies here
+    }
+}
