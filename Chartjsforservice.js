@@ -31,7 +31,7 @@ class VisualizationService {
                     currentPolicy = [];
                 }
                 currentRule = trimmedLine.split('{')[0].trim();
-                currentPolicy.push({ id: currentRule, label: currentRule });
+                currentPolicy.push({ id: currentRule, label: `${currentRule} - Policy rule` });
             }
 
             // Track specific keywords related to OPA policies
@@ -45,24 +45,26 @@ class VisualizationService {
         return policyGroups;
     }
 
-    // Track specified keywords
+    // Track specified keywords and provide more descriptive information
     static trackKeywords(line, currentPolicy) {
         const keywords = {
-            package: 'Package declaration',
-            deny: 'Deny access',
-            allow: 'Allow access',
-            resource_change: 'Resource change evaluation',
-            'resource_change.type': 'Resource change type evaluation',
-            'resource_change.change.after': 'New state after change',
-            'resource_change.change.before': 'Previous state before change',
-            not: 'Logical NOT',
-            msg: 'Message evaluation',
-            policy: 'Policy evaluation'
+            package: 'Package Declaration',
+            deny: 'Deny Rule',
+            allow: 'Allow Rule',
+            resource_change: 'Resource Change Evaluation',
+            'resource_change.type': 'Resource Change Type Evaluation',
+            'resource_change.change.after': 'New State After Change',
+            'resource_change.change.before': 'Previous State Before Change',
+            not: 'Logical NOT Condition',
+            msg: 'Message Evaluation',
+            policy: 'Policy Evaluation'
         };
 
         for (const [key, description] of Object.entries(keywords)) {
             if (line.includes(key)) {
-                currentPolicy.push({ id: `${key} Check`, label: description });
+                // Create a more descriptive label for the policy condition
+                const additionalInfo = line.split(key)[1] ? `: ${line.split(key)[1].trim()}` : '';
+                currentPolicy.push({ id: `${key} Check`, label: `${description}${additionalInfo}` });
             }
         }
     }
