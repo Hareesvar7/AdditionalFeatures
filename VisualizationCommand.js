@@ -4,7 +4,6 @@ const vscode = require('vscode');
 const VisualizationService = require('../services/VisualizationService');
 
 async function visualizePolicies(context) {
-    // Prompt user to select a .rego file
     const fileUri = await vscode.window.showOpenDialog({
         canSelectMany: false,
         filters: {
@@ -17,14 +16,12 @@ async function visualizePolicies(context) {
         return;
     }
 
-    // Fetch and visualize the policies
-    const policies = await VisualizationService.getPolicies(fileUri[0].fsPath);
-    if (!policies) {
+    const policyData = await VisualizationService.getPolicies(fileUri[0].fsPath);
+    if (!policyData || policyData.length === 0) {
         vscode.window.showErrorMessage('No policies found to visualize.');
         return;
     }
 
-    // Open Webview for visualization
     const panel = vscode.window.createWebviewPanel(
         'policyVisualization',
         'Policy Visualization',
@@ -34,8 +31,7 @@ async function visualizePolicies(context) {
         }
     );
 
-    // Set the HTML content for the webview
-    panel.webview.html = VisualizationService.getVisualizationHTML(policies);
+    panel.webview.html = VisualizationService.getVisualizationHTML(policyData);
 }
 
 module.exports = visualizePolicies;
