@@ -8,28 +8,28 @@
         "vscode": "^1.60.0"
     },
     "activationEvents": [
-        "onCommand:policyPilot.showCloudServiceSelection",
-        "onCommand:policyPilot.validateOPA",
-        "onCommand:policyPilot.aiAssist",
-        "onCommand:policyPilot.visualizePolicies"
+        "onCommand:extension.showCloudServiceSelection",
+        "onCommand:extension.validateOPA",
+        "onCommand:extension.aiAssist",
+        "onCommand:extension.visualizePolicies"
     ],
     "main": "./Extension.js",
     "contributes": {
         "commands": [
             {
-                "command": "policyPilot.showCloudServiceSelection",
+                "command": "extension.showCloudServiceSelection",
                 "title": "Show Cloud Service Selection"
             },
             {
-                "command": "policyPilot.validateOPA",
+                "command": "extension.validateOPA",
                 "title": "Validate OPA Policies"
             },
             {
-                "command": "policyPilot.aiAssist",
+                "command": "extension.aiAssist",
                 "title": "AI Assist"
             },
             {
-                "command": "policyPilot.visualizePolicies",
+                "command": "extension.visualizePolicies",
                 "title": "Visualize Policies"
             }
         ]
