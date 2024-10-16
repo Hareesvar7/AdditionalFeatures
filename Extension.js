@@ -21,7 +21,7 @@ function activate(context) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.visualizePolicies', async () => {
-            await visualizePolicies(context); // Pass context to the visualizePolicies command
+            await visualizePolicies(context); // Call the visualization command
         })
     );
 }
