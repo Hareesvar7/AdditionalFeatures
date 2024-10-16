@@ -104,7 +104,14 @@ class VisualizationService {
                         max-width: 800px;
                         margin: 20px auto; /* Centering */
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-                        font-size: 24px; /* Bigger font size for header */
+                    }
+                    .title {
+                        font-size: 28px; /* Bigger font size for title */
+                        font-weight: bold;
+                        text-align: center;
+                        margin: 20px auto;
+                        padding: 10px;
+                        color: #333;
                     }
                     .output-box {
                         background-color: #e6f7ff;
@@ -143,6 +150,7 @@ class VisualizationService {
             </head>
             <body>
                 <div class="header">Visualize OPA Policy</div>
+                <div class="title">Visualize Your Policy</div> <!-- New title added -->
                 <div class="output-box">
                     ${policyElements}
                 </div>
