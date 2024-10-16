@@ -1,15 +1,15 @@
+// src/services/VisualizationService.js
+
 const fs = require('fs');
-const path = require('path');
 
 class VisualizationService {
-    static async getPolicies() {
+    static async getPoliciesFromFile(filePath) {
         try {
-            // Here, load your OPA policies from the relevant files or directory
-            const policyPath = path.join(__dirname, '../policies/');
-            const policies = fs.readFileSync(path.join(policyPath, 'policy.rego'), 'utf8');
+            // Read the policies file
+            const policiesContent = fs.readFileSync(filePath, 'utf8');
 
             // Process the policies into a format suitable for visualization (e.g., JSON)
-            return this.processPolicies(policies);
+            return this.processPolicies(policiesContent);
         } catch (err) {
             console.error("Error reading policies:", err);
             return null;
@@ -23,8 +23,13 @@ class VisualizationService {
             links: []
         };
 
-        // Logic to parse the policies and fill nodes and links for visualization
-        // For example, you could add nodes for each rule and link them if they reference each other.
+        // Logic to parse the policies and fill nodes for visualization
+        const lines = policies.split('\n');
+        lines.forEach((line, index) => {
+            if (line.trim() !== '') {
+                processedData.nodes.push({ id: `policy_${index}`, name: line.trim() });
+            }
+        });
 
         return processedData;
     }
@@ -75,7 +80,7 @@ class VisualizationService {
                         .attr("fill", "blue");
 
                     node.append("title")
-                        .text(d => d.id);
+                        .text(d => d.name);
 
                     simulation.on("tick", () => {
                         link
