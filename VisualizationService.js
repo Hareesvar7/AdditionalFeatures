@@ -59,7 +59,7 @@ class VisualizationService {
     }
 
     static getVisualizationHTML(policyGroups) {
-        const chartData = this.prepareChartData(policyGroups);
+        const treeData = this.prepareTreeData(policyGroups);
 
         return `
             <!DOCTYPE html>
@@ -68,7 +68,7 @@ class VisualizationService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script src="https://unpkg.com/gojs@2.1.46/release/go.js"></script>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -91,62 +91,63 @@ class VisualizationService {
                         margin: 20px auto; /* Centering */
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
-                    .chart-container {
+                    #policyDiagram {
                         width: 80%; /* Adjust width as necessary */
+                        height: 600px; /* Adjust height as necessary */
                         max-width: 800px; /* Maximum width */
                         margin: 20px auto; /* Centering */
+                        border: 1px solid #ccc;
+                        background-color: white;
                     }
                 </style>
             </head>
             <body>
                 <div class="header">Visualize OPA Policy</div>
-                <div class="chart-container">
-                    <canvas id="policyChart"></canvas>
-                </div>
+                <div id="policyDiagram"></div>
+
                 <script>
-                    const ctx = document.getElementById('policyChart').getContext('2d');
-                    const data = ${JSON.stringify(chartData)};
-                    const config = {
-                        type: 'bar', // You can change this type to 'tree', 'bar', etc.
-                        data: data,
-                        options: {
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
-                            }
-                        }
-                    };
-                    const policyChart = new Chart(ctx, config);
+                    const $ = go.GraphObject.make;
+
+                    const myDiagram = $(go.Diagram, "policyDiagram", {
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 35 })
+                    });
+
+                    myDiagram.nodeTemplate =
+                        $(go.Node, "Horizontal",
+                            { background: "#007bff", padding: 10 },
+                            $(go.TextBlock, "Default Text",
+                                { margin: 10, stroke: "white", font: "bold 16px sans-serif" },
+                                new go.Binding("text", "label"))
+                        );
+
+                    myDiagram.linkTemplate =
+                        $(go.Link,
+                            $(go.Shape, { strokeWidth: 2, stroke: "#333" }),
+                            $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
+                        );
+
+                    myDiagram.model = new go.TreeModel(${JSON.stringify(treeData)});
                 </script>
             </body>
             </html>
         `;
     }
 
-    static prepareChartData(policyGroups) {
-        // Prepare data for Chart.js format, assuming a bar chart for now.
-        const labels = [];
-        const datasets = [];
+    static prepareTreeData(policyGroups) {
+        const nodes = [];
+        let keyCounter = 0;
 
         policyGroups.forEach(group => {
-            group.forEach(policy => {
-                labels.push(policy.label);
+            group.forEach((policy, index) => {
+                if (index === 0) {
+                    nodes.push({ key: keyCounter++, label: policy.label });
+                } else {
+                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label });
+                }
             });
         });
 
-        datasets.push({
-            label: 'Policies',
-            data: policyGroups.map(group => group.length),
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-        });
-
-        return {
-            labels: labels,
-            datasets: datasets
-        };
+        return nodes;
     }
 }
 
