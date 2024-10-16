@@ -66,11 +66,12 @@ class VisualizationService {
                 <style>
                     #graph { width: 100%; height: 500px; }
                 </style>
+                <!-- Load D3.js from a CDN -->
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.min.js"></script>
             </head>
             <body>
                 <h1>OPA Policy Visualization</h1>
                 <div id="graph"></div>
-                <script src="${require.resolve('d3/build/d3.min.js')}"></script>
                 <script>
                     const nodes = ${JSON.stringify(policyData.nodes)};
                     const links = ${JSON.stringify(policyData.links)};
