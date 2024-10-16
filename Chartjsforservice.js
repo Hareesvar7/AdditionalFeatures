@@ -14,7 +14,7 @@ class VisualizationService {
         }
     }
 
-    // Process policies dynamically based on keywords
+    // Process policies dynamically based on keywords like deny, allow, resource.type, etc.
     static processPolicies(policies) {
         const lines = policies.split('\n');
         const policyGroups = [];
@@ -38,21 +38,21 @@ class VisualizationService {
             if (trimmedLine.includes('resource_change.type')) {
                 const resourceType = this.extractResourceType(trimmedLine);
                 if (resourceType !== 'unknown') {
-                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Resource Type: ${resourceType}` });
+                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Check resource type: ${resourceType}` });
                 }
             }
 
             // Detect change after and before
             if (trimmedLine.includes('resource_change.change.after')) {
-                currentPolicy.push({ id: 'Change After', label: 'Evaluating Change After' });
+                currentPolicy.push({ id: 'Change After', label: 'Evaluate change after' });
             }
             if (trimmedLine.includes('resource_change.change.before')) {
-                currentPolicy.push({ id: 'Change Before', label: 'Evaluating Change Before' });
+                currentPolicy.push({ id: 'Change Before', label: 'Evaluate change before' });
             }
 
             // Detect not condition
             if (trimmedLine.includes('not')) {
-                currentPolicy.push({ id: 'Not Condition', label: 'Not Condition Applied' });
+                currentPolicy.push({ id: 'Not Condition', label: 'Check not condition' });
             }
 
             // Detect message
@@ -61,9 +61,9 @@ class VisualizationService {
                 currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}` });
             }
 
-            // Detect other conditions
+            // Detect other conditions dynamically
             if (trimmedLine.includes('input.')) {
-                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Condition: ${trimmedLine}` });
+                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Check condition: ${trimmedLine}` });
             }
         });
 
@@ -87,7 +87,6 @@ class VisualizationService {
     // Generate HTML for visualization with Go.js
     static getVisualizationHTML(policyGroups) {
         const treeData = this.prepareTreeData(policyGroups);
-        console.log("Tree Data:", treeData); // Log tree data for debugging
 
         return `
             <!DOCTYPE html>
@@ -122,12 +121,11 @@ class VisualizationService {
                     #policyDiagram {
                         width: 90%; /* Increased width */
                         height: 600px;
-                        max-width: 1000px;
+                        max-width: 1000px; /* Adjusted max width */
                         margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
-                        padding: 10px;
-                        overflow: hidden; /* Hide scrollbar */
+                        padding: 10px; /* Add padding for better spacing */
                     }
                 </style>
             </head>
@@ -139,24 +137,16 @@ class VisualizationService {
                     const $ = go.GraphObject.make;
 
                     const myDiagram = $(go.Diagram, "policyDiagram", {
-                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 50 }) // Adjust layer spacing
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 100 }) // Increased layer spacing for more space between policies
                     });
 
                     myDiagram.nodeTemplate =
                         $(go.Node, "Horizontal",
-                            { padding: 5 },
+                            { background: "#007bff", padding: 5 }, // Reduced padding for compactness
                             $(go.TextBlock, "Default Text",
-                                { margin: 5, font: "bold 14px sans-serif", stroke: "white" }, // Adjust styles
-                                new go.Binding("text", "label"),
-                                new go.Binding("background", "color") // Bind color to background
-                            )
+                                { margin: 5, stroke: "white", font: "bold 14px sans-serif" }, // Adjust font size for nodes
+                                new go.Binding("text", "label"))
                         );
-
-                    // Assign colors alternately for each policy group
-                    const colors = ['#007bff', '#ff69b4']; // Blue and Pink
-                    treeData.forEach((node, index) => {
-                        node.color = colors[index % colors.length]; // Alternate colors
-                    });
 
                     myDiagram.linkTemplate =
                         $(go.Link,
@@ -164,12 +154,7 @@ class VisualizationService {
                             $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
                         );
 
-                    // Check if treeData has nodes to render
-                    if (treeData.length > 0) {
-                        myDiagram.model = new go.TreeModel(treeData);
-                    } else {
-                        console.warn("No data to render.");
-                    }
+                    myDiagram.model = new go.TreeModel(${JSON.stringify(treeData)});
                 </script>
             </body>
             </html>
