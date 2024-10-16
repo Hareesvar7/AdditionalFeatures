@@ -1,8 +1,8 @@
 const vscode = require('vscode');
 const VisualizationService = require('../services/VisualizationService');
 
-module.exports = function (context) {
-    const disposable = vscode.commands.registerCommand('extension.visualizePolicies', async function () {
+function visualizePolicies(context) {
+    const disposable = vscode.commands.registerCommand('policyPilot.visualizePolicies', async function () {
         const policies = await VisualizationService.getPolicies();
         if (!policies) {
             vscode.window.showErrorMessage('No policies found to visualize.');
@@ -24,4 +24,8 @@ module.exports = function (context) {
     });
 
     context.subscriptions.push(disposable);
+}
+
+module.exports = {
+    visualizePolicies
 };
