@@ -7,10 +7,21 @@ class LintingService {
         const declaredVariables = new Set();
         const usedVariables = new Set();
 
+        let allowFound = false;
+        let denyFound = false;
+
         lines.forEach((line, index) => {
             const trimmedLine = line.trim();
 
-            // Rule 1: Ensure 'allow' and 'deny' rules are used properly
+            // Rule 1: Track allow and deny presence
+            if (trimmedLine.startsWith('allow')) {
+                allowFound = true;
+            }
+            if (trimmedLine.startsWith('deny')) {
+                denyFound = true;
+            }
+
+            // Rule 2: Ensure 'allow' and 'deny' rules are used properly
             if (trimmedLine.startsWith('allow') || trimmedLine.startsWith('deny')) {
                 if (!this.hasCorrespondingAllowDeny(trimmedLine, lines)) {
                     issues.push({
@@ -20,7 +31,7 @@ class LintingService {
                 }
             }
 
-            // Rule 2: Line length should not exceed 100 characters
+            // Rule 3: Line length should not exceed 100 characters
             if (trimmedLine.length > 100) {
                 issues.push({
                     line: index + 1,
@@ -28,13 +39,13 @@ class LintingService {
                 });
             }
 
-            // Rule 3: Track declared variables
+            // Rule 4: Track declared variables
             this.trackDeclaredVariables(trimmedLine, declaredVariables);
 
-            // Rule 4: Track used variables
+            // Rule 5: Track used variables
             this.trackUsedVariables(trimmedLine, usedVariables);
 
-            // Rule 5: Ensure messages are descriptive
+            // Rule 6: Ensure messages are descriptive
             if (trimmedLine.includes('msg')) {
                 const message = this.extractMessage(trimmedLine);
                 if (message.length < 10) {
@@ -45,7 +56,7 @@ class LintingService {
                 }
             }
 
-            // Rule 6: Ensure that rules have comments
+            // Rule 7: Ensure that rules have comments
             if (trimmedLine.startsWith('allow') || trimmedLine.startsWith('deny')) {
                 if (!this.hasComment(lines, index)) {
                     issues.push({
@@ -55,7 +66,7 @@ class LintingService {
                 }
             }
 
-            // Rule 7: Check for logical errors in policy conditions
+            // Rule 8: Check for logical errors in policy conditions
             if (this.hasLogicalErrors(trimmedLine)) {
                 issues.push({
                     line: index + 1,
@@ -63,7 +74,7 @@ class LintingService {
                 });
             }
 
-            // Rule 8: Validate the use of the "not" operator
+            // Rule 9: Validate the use of the "not" operator
             if (trimmedLine.includes('not') && !this.isValidNotUsage(trimmedLine)) {
                 issues.push({
                     line: index + 1,
@@ -71,6 +82,13 @@ class LintingService {
                 });
             }
         });
+
+        // Rule 10: If both allow and deny rules are found, ensure logical evaluation
+        if (allowFound && denyFound) {
+            issues.push({
+                message: 'Both allow and deny rules are present. Ensure logical evaluation is correct.'
+            });
+        }
 
         // Check for unused variables after analyzing all lines
         declaredVariables.forEach(variable => {
