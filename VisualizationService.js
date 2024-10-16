@@ -7,7 +7,6 @@ class VisualizationService {
         try {
             // Read the Rego file
             const policies = fs.readFileSync(filePath, 'utf8');
-            // Process the policies into a format suitable for visualization
             return this.processPolicies(policies);
         } catch (err) {
             console.error("Error reading policies:", err);
@@ -18,31 +17,37 @@ class VisualizationService {
     static processPolicies(policies) {
         const lines = policies.split('\n');
         const policyGroups = [];
-        let currentDeny = '';
         let currentPolicy = [];
 
         lines.forEach((line) => {
             const trimmedLine = line.trim();
 
-            // Capture deny statements
+            // Identify deny statements and start new policy group
             if (trimmedLine.startsWith('deny')) {
                 if (currentPolicy.length) {
                     policyGroups.push(currentPolicy);
                     currentPolicy = [];
                 }
-                currentDeny = trimmedLine.split('{')[0].trim(); // Get the deny message
-                currentPolicy.push({ id: currentDeny, label: currentDeny });
+                currentPolicy.push({ id: trimmedLine, label: `Policy: ${trimmedLine}` });
             }
 
-            // Check for resource type
-            if (currentDeny && trimmedLine.includes('resource')) {
+            // Check for resource type and add it to current policy
+            if (trimmedLine.includes('resource.type ==')) {
                 const resourceType = this.extractResourceType(trimmedLine);
-                currentPolicy.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+                if (resourceType !== 'unknown') {
+                    currentPolicy.push({ id: `Check resource type: ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+                }
             }
 
-            // Check for VPC configuration
-            if (currentDeny && trimmedLine.includes('vpc_configuration')) {
-                currentPolicy.push({ id: 'Check if VPC configuration exists', label: 'Check if VPC configuration exists' });
+            // Check for specific conditions like VPC
+            if (trimmedLine.includes('vpc_configuration')) {
+                currentPolicy.push({ id: 'Check VPC configuration', label: 'Check if VPC configuration exists' });
+            }
+
+            // Add other conditions or checks dynamically
+            if (trimmedLine.includes('action ==')) {
+                const action = this.extractAction(trimmedLine);
+                currentPolicy.push({ id: `Check action: ${action}`, label: `Check if action is ${action}` });
             }
         });
 
@@ -58,6 +63,11 @@ class VisualizationService {
         return match ? match[1] : 'unknown';
     }
 
+    static extractAction(line) {
+        const match = line.match(/action == "(.*?)"/);
+        return match ? match[1] : 'unknown';
+    }
+
     static getVisualizationHTML(policyGroups) {
         const treeData = this.prepareTreeData(policyGroups);
 
@@ -68,7 +78,7 @@ class VisualizationService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
-                <script src="https://unpkg.com/gojs@2.1.46/release/go.js"></script>
+                <script src="https://unpkg.com/gojs/release/go.js"></script>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -81,21 +91,21 @@ class VisualizationService {
                         margin: 0;
                     }
                     .header {
-                        background-color: #007bff; /* Blue color for header */
+                        background-color: #007bff;
                         color: white;
                         padding: 10px;
                         border-radius: 5px;
                         text-align: center;
                         width: 80%;
                         max-width: 800px;
-                        margin: 20px auto; /* Centering */
+                        margin: 20px auto;
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     #policyDiagram {
-                        width: 80%; /* Adjust width as necessary */
-                        height: 600px; /* Adjust height as necessary */
-                        max-width: 800px; /* Maximum width */
-                        margin: 20px auto; /* Centering */
+                        width: 80%;
+                        height: 600px;
+                        max-width: 800px;
+                        margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
                     }
