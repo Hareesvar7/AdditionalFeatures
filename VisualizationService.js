@@ -26,7 +26,6 @@ class VisualizationService {
                 const resourceType = this.extractResourceType(trimmedLine);
                 policyData.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
             }
-            // Additional parsing can go here
         });
 
         return policyData;
@@ -75,41 +74,45 @@ class VisualizationService {
                 <script>
                     const policyData = ${JSON.stringify(policyData)};
                     const svg = d3.select("#chart");
-                    const width = svg.attr("width");
-                    const height = svg.attr("height");
+                    const width = 800;
+                    const height = 600;
+                    const radius = 40;
+
+                    svg.attr("width", width).attr("height", height);
 
                     const nodes = policyData.map((d, i) => ({
                         id: d.id,
                         label: d.label,
-                        x: Math.random() * width,
-                        y: Math.random() * height
+                        x: 100 + i * 150,
+                        y: 100 + (i % 2) * 150
                     }));
 
-                    const links = nodes.map((node, i) => {
+                    const links = nodes.map((_, i) => {
                         if (i < nodes.length - 1) {
-                            return { source: node, target: nodes[i + 1] };
+                            return { source: nodes[i], target: nodes[i + 1] };
                         }
-                    }).filter(d => d); // Remove undefined links
+                    }).filter(d => d);
 
-                    // Add links (arrows) between nodes
-                    svg.selectAll("line")
+                    const link = svg.selectAll(".link")
                         .data(links)
-                        .enter().append("line")
+                        .enter()
+                        .append("line")
                         .attr("x1", d => d.source.x)
                         .attr("y1", d => d.source.y)
                         .attr("x2", d => d.target.x)
                         .attr("y2", d => d.target.y)
-                        .style("stroke", "#333");
+                        .style("stroke", "#333")
+                        .style("stroke-width", 2);
 
-                    // Add nodes
-                    const node = svg.selectAll("circle")
+                    const node = svg.selectAll(".node")
                         .data(nodes)
-                        .enter().append("g")
+                        .enter()
+                        .append("g")
                         .attr("class", "node")
                         .attr("transform", d => `translate(${d.x}, ${d.y})`);
 
                     node.append("circle")
-                        .attr("r", 20)
+                        .attr("r", radius)
                         .style("fill", "#007bff");
 
                     node.append("text")
@@ -118,7 +121,6 @@ class VisualizationService {
                         .style("fill", "white")
                         .text(d => d.label);
 
-                    // Drag functionality
                     const drag = d3.drag()
                         .on("start", dragstarted)
                         .on("drag", dragged)
@@ -131,6 +133,11 @@ class VisualizationService {
                     function dragged(event, d) {
                         d3.select(this)
                             .attr("transform", `translate(${d.x = event.x}, ${d.y = event.y})`);
+
+                        link.attr("x1", d => d.source.x)
+                            .attr("y1", d => d.source.y)
+                            .attr("x2", d => d.target.x)
+                            .attr("y2", d => d.target.y);
                     }
 
                     function dragended(event) {
