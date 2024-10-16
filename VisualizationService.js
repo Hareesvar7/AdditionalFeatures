@@ -122,27 +122,21 @@ class VisualizationService {
                         .text(d => d.label);
 
                     const drag = d3.drag()
-                        .on("start", dragstarted)
-                        .on("drag", dragged)
-                        .on("end", dragended);
-
-                    function dragstarted(event) {
-                        d3.select(this).raise().classed("active", true);
-                    }
-
-                    function dragged(event, d) {
-                        d3.select(this)
-                            .attr("transform", `translate(${d.x = event.x}, ${d.y = event.y})`);
-
-                        link.attr("x1", d => d.source.x)
-                            .attr("y1", d => d.source.y)
-                            .attr("x2", d => d.target.x)
-                            .attr("y2", d => d.target.y);
-                    }
-
-                    function dragended(event) {
-                        d3.select(this).classed("active", false);
-                    }
+                        .on("start", function (event, d) {
+                            d3.select(this).raise().classed("active", true);
+                        })
+                        .on("drag", function (event, d) {
+                            d.x = event.x;
+                            d.y = event.y;
+                            d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
+                            link.attr("x1", d => d.source.x)
+                                .attr("y1", d => d.source.y)
+                                .attr("x2", d => d.target.x)
+                                .attr("y2", d => d.target.y);
+                        })
+                        .on("end", function () {
+                            d3.select(this).classed("active", false);
+                        });
 
                     node.call(drag);
                 </script>
