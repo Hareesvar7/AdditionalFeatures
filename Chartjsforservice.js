@@ -57,7 +57,7 @@ class VisualizationService {
 
             // Detect message
             if (trimmedLine.includes('msg')) {
-                const message = this.extractMessage(trimmedLine);
+                const message = this.extractMessage(lines, line);
                 currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}` });
             }
 
@@ -79,9 +79,19 @@ class VisualizationService {
         return match ? match[1] : 'unknown';
     }
 
-    static extractMessage(line) {
+    static extractMessage(lines, line) {
         const match = line.match(/msg == "(.*?)"/);
-        return match ? match[1] : 'unknown';
+        if (match) {
+            // Get the index of the current line
+            const index = lines.indexOf(line);
+            // Get five words before and after the message
+            const words = match[1].split(' ');
+            const start = Math.max(0, index - 5);
+            const end = Math.min(lines.length, index + 6);
+            const context = lines.slice(start, end).join(' ');
+            return `${context.trim()}: ${words.join(' ')}`;
+        }
+        return 'unknown';
     }
 
     // Generate HTML for visualization with Go.js
@@ -102,7 +112,7 @@ class VisualizationService {
                         background-color: #f4f4f4;
                         display: flex;
                         justify-content: center;
-                        align-items: center;
+                        align-items: flex-start;
                         flex-direction: column;
                         height: 100vh;
                         margin: 0;
@@ -119,14 +129,14 @@ class VisualizationService {
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     #policyDiagram {
-                        width: 90%;
+                        width: 90%; /* Increased width to reduce scrolling */
                         height: 600px;
-                        max-width: 1000px;
+                        max-width: 1000px; /* Adjusted max width */
                         margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
-                        padding: 10px;
-                        overflow: hidden; /* Removed scrollbar */
+                        overflow: hidden; /* Prevent scrolling */
+                        padding: 10px; /* Add padding for better spacing */
                     }
                 </style>
             </head>
@@ -138,13 +148,12 @@ class VisualizationService {
                     const $ = go.GraphObject.make;
 
                     const myDiagram = $(go.Diagram, "policyDiagram", {
-                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 30 }) // Adjusted layer spacing for smaller gaps
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 20 }) // Adjusted layer spacing
                     });
 
                     myDiagram.nodeTemplate =
                         $(go.Node, "Horizontal",
-                            { padding: 5 },
-                            new go.Binding("background", "color"), // Bind node color to a property
+                            { background: "#007bff", padding: 5 },
                             $(go.TextBlock, "Default Text",
                                 { margin: 5, stroke: "white", font: "bold 14px sans-serif" },
                                 new go.Binding("text", "label"))
@@ -168,13 +177,13 @@ class VisualizationService {
         const nodes = [];
         let keyCounter = 0;
 
-        policyGroups.forEach((group, groupIndex) => {
-            const color = groupIndex % 2 === 0 ? "#ffcccb" : "#add8e6"; // Alternate colors for policies
-            group.forEach((policy, index) => {
-                if (index === 0) {
-                    nodes.push({ key: keyCounter++, label: policy.label, color: color });
+        policyGroups.forEach((group, index) => {
+            const color = index % 2 === 0 ? "#e3f2fd" : "#fce4ec"; // Alternate colors
+            group.forEach((policy, groupIndex) => {
+                if (groupIndex === 0) {
+                    nodes.push({ key: keyCounter++, label: policy.label, color });
                 } else {
-                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label, color: color });
+                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label, color });
                 }
             });
         });
