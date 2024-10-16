@@ -5,6 +5,7 @@ const fs = require('fs');
 class VisualizationService {
     static async getPolicies(filePath) {
         try {
+            // Read the Rego file
             const policies = fs.readFileSync(filePath, 'utf8');
             return this.processPolicies(policies);
         } catch (err) {
@@ -13,36 +14,63 @@ class VisualizationService {
         }
     }
 
+    // Process policies dynamically based on specific keywords
     static processPolicies(policies) {
         const lines = policies.split('\n');
-        const policyData = [];
+        const policyGroups = [];
+        let currentPolicy = [];
+        let currentRule = '';
 
         lines.forEach((line) => {
             const trimmedLine = line.trim();
 
-            if (trimmedLine.startsWith('deny')) {
-                policyData.push({ action: 'Deny', label: trimmedLine });
-            } else if (trimmedLine.startsWith('allow')) {
-                policyData.push({ action: 'Allow', label: trimmedLine });
-            } else if (trimmedLine.includes('resource.type')) {
-                const resourceType = this.extractResourceType(trimmedLine);
-                policyData.push({ action: 'Resource Type', label: resourceType });
+            // Detect and start a new deny/allow rule
+            if (trimmedLine.startsWith('deny') || trimmedLine.startsWith('allow')) {
+                if (currentPolicy.length) {
+                    policyGroups.push(currentPolicy);
+                    currentPolicy = [];
+                }
+                currentRule = trimmedLine.split('{')[0].trim();
+                currentPolicy.push({ id: currentRule, label: currentRule });
             }
-            // Additional parsing can go here
+
+            // Track specific keywords related to OPA policies
+            this.trackKeywords(trimmedLine, currentPolicy);
         });
 
-        return policyData;
+        if (currentPolicy.length) {
+            policyGroups.push(currentPolicy);
+        }
+
+        return policyGroups;
     }
 
-    static extractResourceType(line) {
-        const match = line.match(/resource\.type == "(.*?)"/);
-        return match ? match[1] : 'unknown';
+    // Track specified keywords
+    static trackKeywords(line, currentPolicy) {
+        const keywords = {
+            package: 'Package declaration',
+            deny: 'Deny access',
+            allow: 'Allow access',
+            resource_change: 'Resource change evaluation',
+            'resource_change.type': 'Resource change type evaluation',
+            'resource_change.change.after': 'New state after change',
+            'resource_change.change.before': 'Previous state before change',
+            not: 'Logical NOT',
+            msg: 'Message evaluation',
+            policy: 'Policy evaluation'
+        };
+
+        for (const [key, description] of Object.entries(keywords)) {
+            if (line.includes(key)) {
+                currentPolicy.push({ id: `${key} Check`, label: description });
+            }
+        }
     }
 
-    static getVisualizationHTML(policyData) {
-        const labels = policyData.map(item => item.label);
-        const actions = policyData.map(item => item.action);
-        
+    // Generate HTML for visualization with Go.js
+    static getVisualizationHTML(policyGroups) {
+        const treeData = this.prepareTreeData(policyGroups);
+
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -50,19 +78,17 @@ class VisualizationService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script src="https://unpkg.com/gojs/release/go.js"></script>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
                         background-color: #f4f4f4;
                         display: flex;
+                        justify-content: center;
+                        align-items: flex-start;
                         flex-direction: column;
-                        align-items: center;
-                    }
-                    .chart-container {
-                        width: 80%;
-                        max-width: 800px;
-                        margin-top: 20px;
+                        height: 100vh;
+                        margin: 0;
                     }
                     .header {
                         background-color: #007bff;
@@ -70,50 +96,69 @@ class VisualizationService {
                         padding: 10px;
                         border-radius: 5px;
                         text-align: center;
-                        width: 100%;
-                        margin: 20px 0;
+                        width: 80%;
+                        max-width: 800px;
+                        margin: 20px auto;
+                        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+                    }
+                    #policyDiagram {
+                        width: 80%;
+                        height: 600px;
+                        max-width: 800px;
+                        margin: 20px auto;
+                        border: 1px solid #ccc;
+                        background-color: white;
                     }
                 </style>
             </head>
             <body>
                 <div class="header">Visualize OPA Policy</div>
-                <div class="chart-container">
-                    <canvas id="policyChart"></canvas>
-                </div>
+                <div id="policyDiagram"></div>
+
                 <script>
-                    const ctx = document.getElementById('policyChart').getContext('2d');
-                    const policyChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: ${JSON.stringify(labels)},
-                            datasets: [{
-                                label: 'Policy Actions',
-                                data: ${JSON.stringify(actions.map(action => action === 'Deny' ? 1 : action === 'Allow' ? 1 : 0))},
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.2)',
-                                    'rgba(54, 162, 235, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
-                                ],
-                                borderColor: [
-                                    'rgba(255, 99, 132, 1)',
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255, 206, 86, 1)',
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
-                            }
-                        }
+                    const $ = go.GraphObject.make;
+
+                    const myDiagram = $(go.Diagram, "policyDiagram", {
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 35 })
                     });
+
+                    myDiagram.nodeTemplate =
+                        $(go.Node, "Horizontal",
+                            { background: "#007bff", padding: 10 },
+                            $(go.TextBlock, "Default Text",
+                                { margin: 10, stroke: "white", font: "bold 16px sans-serif" },
+                                new go.Binding("text", "label"))
+                        );
+
+                    myDiagram.linkTemplate =
+                        $(go.Link,
+                            $(go.Shape, { strokeWidth: 2, stroke: "#333" }),
+                            $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
+                        );
+
+                    myDiagram.model = new go.TreeModel(${JSON.stringify(treeData)});
                 </script>
             </body>
             </html>
         `;
+    }
+
+    // Prepare tree data for Go.js visualization
+    static prepareTreeData(policyGroups) {
+        const nodes = [];
+        let keyCounter = 0;
+
+        policyGroups.forEach(group => {
+            group.forEach((policy, index) => {
+                if (index === 0) {
+                    nodes.push({ key: keyCounter++, label: policy.label });
+                } else {
+                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label });
+                }
+            });
+        });
+
+        return nodes;
     }
 }
 
