@@ -5,7 +5,9 @@ const fs = require('fs');
 class VisualizationService {
     static async getPolicies(filePath) {
         try {
+            // Read the Rego file
             const policies = fs.readFileSync(filePath, 'utf8');
+            // Process the policies into a format suitable for visualization
             return this.processPolicies(policies);
         } catch (err) {
             console.error("Error reading policies:", err);
@@ -15,20 +17,40 @@ class VisualizationService {
 
     static processPolicies(policies) {
         const lines = policies.split('\n');
-        const policyData = [];
+        const policyGroups = [];
+        let currentDeny = '';
+        let currentPolicy = [];
 
         lines.forEach((line) => {
             const trimmedLine = line.trim();
 
+            // Capture deny statements
             if (trimmedLine.startsWith('deny')) {
-                policyData.push({ id: trimmedLine, label: trimmedLine });
-            } else if (trimmedLine.includes('resource.type')) {
+                if (currentPolicy.length) {
+                    policyGroups.push(currentPolicy);
+                    currentPolicy = [];
+                }
+                currentDeny = trimmedLine.split('{')[0].trim(); // Get the deny message
+                currentPolicy.push({ id: currentDeny, label: currentDeny });
+            }
+
+            // Check for resource type
+            if (currentDeny && trimmedLine.includes('resource')) {
                 const resourceType = this.extractResourceType(trimmedLine);
-                policyData.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+                currentPolicy.push({ id: `Check if resource type is ${resourceType}`, label: `Check if resource type is ${resourceType}` });
+            }
+
+            // Check for VPC configuration
+            if (currentDeny && trimmedLine.includes('vpc_configuration')) {
+                currentPolicy.push({ id: 'Check if VPC configuration exists', label: 'Check if VPC configuration exists' });
             }
         });
 
-        return policyData;
+        if (currentPolicy.length) {
+            policyGroups.push(currentPolicy);
+        }
+
+        return policyGroups;
     }
 
     static extractResourceType(line) {
@@ -36,7 +58,24 @@ class VisualizationService {
         return match ? match[1] : 'unknown';
     }
 
-    static getVisualizationHTML(policyData) {
+    static getVisualizationHTML(policyGroups) {
+        const policyElements = policyGroups.map(group => {
+            const nodeElements = group.map(node => `<div class="node">${node.label}</div>`).join('');
+            const connections = group.map((_, index) => {
+                if (index < group.length - 1) {
+                    return `<div class="arrow"></div>`;
+                }
+                return '';
+            }).join('');
+
+            return `
+                <div class="policy-container">
+                    ${nodeElements}
+                    ${connections}
+                </div>
+            `;
+        }).join('<div class="separator"></div>'); // Separator between different policy groups
+
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -44,102 +83,70 @@ class VisualizationService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
-                <script src="https://d3js.org/d3.v7.min.js"></script>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
                         background-color: #f4f4f4;
                         display: flex;
+                        justify-content: center;
+                        align-items: flex-start;
                         flex-direction: column;
-                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
                     }
                     .header {
-                        background-color: #007bff;
+                        background-color: #007bff; /* Blue color for header */
                         color: white;
                         padding: 10px;
                         border-radius: 5px;
                         text-align: center;
-                        margin-bottom: 10px;
-                    }
-                    #chart {
                         width: 80%;
-                        height: 600px;
-                        border: 1px solid black;
+                        max-width: 800px;
+                        margin: 20px auto; /* Centering */
+                        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+                    }
+                    .output-box {
+                        background-color: #e6f7ff;
+                        padding: 20px;
+                        border-radius: 5px;
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+                        width: 80%; /* Adjust width as necessary */
+                        max-width: 800px; /* Maximum width */
+                        margin: 20px auto; /* Centering */
+                        margin-top: 10px; /* Gap from header */
+                    }
+                    .node {
+                        background-color: #007bff; /* Blue color for nodes */
+                        color: white;
+                        padding: 20px;
+                        margin: 10px;
+                        border-radius: 5px;
+                        text-align: center;
+                        width: 300px;
+                        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+                    }
+                    .arrow {
+                        width: 2px;
+                        height: 50px;
+                        background-color: #333;
+                        margin: 0 auto;
+                    }
+                    .policy-container {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        margin-bottom: 40px; /* Space between policy groups */
+                    }
+                    .separator {
+                        height: 20px; /* Space between different policy groups */
                     }
                 </style>
             </head>
             <body>
                 <div class="header">Visualize OPA Policy</div>
-                <svg id="chart"></svg>
-                <script>
-                    const policyData = ${JSON.stringify(policyData)};
-                    const svg = d3.select("#chart");
-                    const width = 800;
-                    const height = 600;
-                    const radius = 40;
-
-                    svg.attr("width", width).attr("height", height);
-
-                    const nodes = policyData.map((d, i) => ({
-                        id: d.id,
-                        label: d.label,
-                        x: 100 + i * 150,
-                        y: 100 + (i % 2) * 150
-                    }));
-
-                    const links = nodes.map((_, i) => {
-                        if (i < nodes.length - 1) {
-                            return { source: nodes[i], target: nodes[i + 1] };
-                        }
-                    }).filter(d => d);
-
-                    const link = svg.selectAll(".link")
-                        .data(links)
-                        .enter()
-                        .append("line")
-                        .attr("x1", d => d.source.x)
-                        .attr("y1", d => d.source.y)
-                        .attr("x2", d => d.target.x)
-                        .attr("y2", d => d.target.y)
-                        .style("stroke", "#333")
-                        .style("stroke-width", 2);
-
-                    const node = svg.selectAll(".node")
-                        .data(nodes)
-                        .enter()
-                        .append("g")
-                        .attr("class", "node")
-                        .attr("transform", d => `translate(${d.x}, ${d.y})`);
-
-                    node.append("circle")
-                        .attr("r", radius)
-                        .style("fill", "#007bff");
-
-                    node.append("text")
-                        .attr("dy", ".35em")
-                        .attr("text-anchor", "middle")
-                        .style("fill", "white")
-                        .text(d => d.label);
-
-                    const drag = d3.drag()
-                        .on("start", function (event, d) {
-                            d3.select(this).raise().classed("active", true);
-                        })
-                        .on("drag", function (event, d) {
-                            d.x = event.x;
-                            d.y = event.y;
-                            d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
-                            link.attr("x1", d => d.source.x)
-                                .attr("y1", d => d.source.y)
-                                .attr("x2", d => d.target.x)
-                                .attr("y2", d => d.target.y);
-                        })
-                        .on("end", function () {
-                            d3.select(this).classed("active", false);
-                        });
-
-                    node.call(drag);
-                </script>
+                <div class="output-box">
+                    ${policyElements}
+                </div>
             </body>
             </html>
         `;
