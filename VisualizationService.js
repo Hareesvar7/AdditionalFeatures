@@ -1,10 +1,14 @@
+// src/services/VisualizationService.js
+
 const fs = require('fs');
+const path = require('path');
 
 class VisualizationService {
     static async getPolicies(filePath) {
         try {
-            // Read the contents of the selected .rego file
+            // Read the Rego file
             const policies = fs.readFileSync(filePath, 'utf8');
+            // Process the policies into a format suitable for visualization (e.g., JSON)
             return this.processPolicies(policies);
         } catch (err) {
             console.error("Error reading policies:", err);
@@ -47,8 +51,8 @@ class VisualizationService {
     }
 
     static extractResourceType(line) {
-        const match = line.match(/resource.type == "(.*?)"/);
-        return match ? match[1] : "Unknown Resource Type";
+        const match = line.match(/resource\.type == "(.*?)"/);
+        return match ? match[1] : 'unknown';
     }
 
     static getVisualizationHTML(policyData) {
@@ -66,7 +70,7 @@ class VisualizationService {
             <body>
                 <h1>OPA Policy Visualization</h1>
                 <div id="graph"></div>
-                <script src="https://d3js.org/d3.v7.min.js"></script>
+                <script src="${require.resolve('d3/build/d3.min.js')}"></script>
                 <script>
                     const nodes = ${JSON.stringify(policyData.nodes)};
                     const links = ${JSON.stringify(policyData.links)};
