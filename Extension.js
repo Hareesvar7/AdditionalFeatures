@@ -1,24 +1,26 @@
+// src/Extension.js
+
 const vscode = require('vscode');
 const { showCloudServiceSelection } = require('./commands/cloudServiceSelection');
 const { validateOPA } = require('./commands/Opavalidate');
 const { aiAssist } = require('./commands/Aiassist');
-const { visualizePolicies } = require('./commands/visualization'); // Ensure this file exists
+const visualizePolicies = require('./commands/VisualizationCommand'); // Adjusted import
 
 function activate(context) {
     console.log('Extension "PolicyPilot" is now active!');
 
-    // Register commands (ensure unique names)
+    // Register commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('policyPilot.showCloudServiceSelection', showCloudServiceSelection)
+        vscode.commands.registerCommand('extension.showCloudServiceSelection', showCloudServiceSelection)
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand('policyPilot.validateOPA', validateOPA)
+        vscode.commands.registerCommand('extension.validateOPA', validateOPA)
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand('policyPilot.aiAssist', aiAssist)
+        vscode.commands.registerCommand('extension.aiAssist', aiAssist)
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand('policyPilot.visualizePolicies', () => visualizePolicies(context)) // Pass context here
+        visualizePolicies(context) // Pass context to the visualizePolicies command
     );
 }
 
