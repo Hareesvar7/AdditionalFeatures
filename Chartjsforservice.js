@@ -31,39 +31,39 @@ class VisualizationService {
                     currentPolicy = [];
                 }
                 currentRule = trimmedLine.split('{')[0].trim();
-                currentPolicy.push({ id: currentRule, label: currentRule });
+                currentPolicy.push({ id: currentRule, label: `Rule: ${currentRule}. Defines the action taken for this policy.` });
             }
 
             // Detect resource change type
             if (trimmedLine.includes('resource_change.type')) {
                 const resourceType = this.extractResourceType(trimmedLine);
                 if (resourceType !== 'unknown') {
-                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Check resource type: ${resourceType}` });
+                    currentPolicy.push({ id: `Resource Type: ${resourceType}`, label: `Resource Type: ${resourceType}. Specifies the resource being evaluated.` });
                 }
             }
 
             // Detect change after and before
             if (trimmedLine.includes('resource_change.change.after')) {
-                currentPolicy.push({ id: 'Change After', label: 'Evaluate change after' });
+                currentPolicy.push({ id: 'Change After', label: 'Change After: Evaluates the new state of the resource.' });
             }
             if (trimmedLine.includes('resource_change.change.before')) {
-                currentPolicy.push({ id: 'Change Before', label: 'Evaluate change before' });
+                currentPolicy.push({ id: 'Change Before', label: 'Change Before: Evaluates the previous state of the resource.' });
             }
 
             // Detect not condition
             if (trimmedLine.includes('not')) {
-                currentPolicy.push({ id: 'Not Condition', label: 'Check not condition' });
+                currentPolicy.push({ id: 'Not Condition', label: 'Not Condition: Checks for the absence of a condition.' });
             }
 
             // Detect message
             if (trimmedLine.includes('msg')) {
-                const message = this.extractMessage(lines, line);
-                currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}` });
+                const message = this.extractMessage(trimmedLine);
+                currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}. Displays an informative message based on evaluation.` });
             }
 
             // Detect other conditions dynamically
             if (trimmedLine.includes('input.')) {
-                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Check condition: ${trimmedLine}` });
+                currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Condition: ${trimmedLine}. Checks a specific input condition relevant to the policy.` });
             }
         });
 
@@ -79,19 +79,9 @@ class VisualizationService {
         return match ? match[1] : 'unknown';
     }
 
-    static extractMessage(lines, line) {
+    static extractMessage(line) {
         const match = line.match(/msg == "(.*?)"/);
-        if (match) {
-            // Get the index of the current line
-            const index = lines.indexOf(line);
-            // Get five words before and after the message
-            const words = match[1].split(' ');
-            const start = Math.max(0, index - 5);
-            const end = Math.min(lines.length, index + 6);
-            const context = lines.slice(start, end).join(' ');
-            return `${context.trim()}: ${words.join(' ')}`;
-        }
-        return 'unknown';
+        return match ? match[1] : 'unknown';
     }
 
     // Generate HTML for visualization with Go.js
@@ -112,7 +102,7 @@ class VisualizationService {
                         background-color: #f4f4f4;
                         display: flex;
                         justify-content: center;
-                        align-items: flex-start;
+                        align-items: center;
                         flex-direction: column;
                         height: 100vh;
                         margin: 0;
@@ -129,14 +119,14 @@ class VisualizationService {
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
                     }
                     #policyDiagram {
-                        width: 90%; /* Increased width to reduce scrolling */
+                        width: 90%;
                         height: 600px;
-                        max-width: 1000px; /* Adjusted max width */
+                        max-width: 1000px;
                         margin: 20px auto;
                         border: 1px solid #ccc;
                         background-color: white;
-                        overflow: hidden; /* Prevent scrolling */
-                        padding: 10px; /* Add padding for better spacing */
+                        padding: 10px;
+                        overflow: hidden; /* Removed scrollbar */
                     }
                 </style>
             </head>
@@ -148,12 +138,13 @@ class VisualizationService {
                     const $ = go.GraphObject.make;
 
                     const myDiagram = $(go.Diagram, "policyDiagram", {
-                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 20 }) // Adjusted layer spacing
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 30 }) // Adjusted layer spacing for smaller gaps
                     });
 
                     myDiagram.nodeTemplate =
                         $(go.Node, "Horizontal",
-                            { background: "#007bff", padding: 5 },
+                            { padding: 5 },
+                            new go.Binding("background", "color"), // Bind node color to a property
                             $(go.TextBlock, "Default Text",
                                 { margin: 5, stroke: "white", font: "bold 14px sans-serif" },
                                 new go.Binding("text", "label"))
@@ -177,13 +168,13 @@ class VisualizationService {
         const nodes = [];
         let keyCounter = 0;
 
-        policyGroups.forEach((group, index) => {
-            const color = index % 2 === 0 ? "#e3f2fd" : "#fce4ec"; // Alternate colors
-            group.forEach((policy, groupIndex) => {
-                if (groupIndex === 0) {
-                    nodes.push({ key: keyCounter++, label: policy.label, color });
+        policyGroups.forEach((group, groupIndex) => {
+            const color = groupIndex % 2 === 0 ? "#ffcccb" : "#add8e6"; // Alternate colors for policies
+            group.forEach((policy, index) => {
+                if (index === 0) {
+                    nodes.push({ key: keyCounter++, label: policy.label, color: color });
                 } else {
-                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label, color });
+                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label, color: color });
                 }
             });
         });
