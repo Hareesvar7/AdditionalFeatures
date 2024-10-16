@@ -63,7 +63,7 @@ class VisualizationService {
             const nodeElements = group.map(node => `<div class="node">${node.label}</div>`).join('');
             const connections = group.map((_, index) => {
                 if (index < group.length - 1) {
-                    return `<div class="arrow"></div>`;
+                    return `<div class="arrow">➡️</div>`; // Use arrow character
                 }
                 return '';
             }).join('');
@@ -104,6 +104,7 @@ class VisualizationService {
                         max-width: 800px;
                         margin: 20px auto; /* Centering */
                         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+                        font-size: 24px; /* Bigger font size for header */
                     }
                     .output-box {
                         background-color: #e6f7ff;
@@ -126,9 +127,7 @@ class VisualizationService {
                         box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
                     }
                     .arrow {
-                        width: 2px;
-                        height: 50px;
-                        background-color: #333;
+                        font-size: 24px; /* Increase arrow size */
                         margin: 0 auto;
                     }
                     .policy-container {
