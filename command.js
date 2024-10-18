@@ -3,7 +3,6 @@
 const vscode = require('vscode');
 const ConvertPolicyService = require('../services/ConvertPolicyService');
 const fs = require('fs');
-const path = require('path');
 
 async function convertPolicy(context) {
     const panel = vscode.window.createWebviewPanel(
@@ -19,12 +18,15 @@ async function convertPolicy(context) {
         switch (message.command) {
             case 'convert':
                 const { filePath, format } = message;
+
+                // Add debug logging to trace conversion attempts
+                console.log(`Attempting to convert file: ${filePath} to format: ${format}`);
                 const convertedPolicy = await ConvertPolicyService.convertPolicy(filePath, format);
 
                 if (convertedPolicy) {
                     panel.webview.postMessage({ command: 'showConvertedPolicy', convertedPolicy });
                 } else {
-                    vscode.window.showErrorMessage('Conversion failed.');
+                    vscode.window.showErrorMessage('Conversion failed. Please check the console for more details.');
                 }
                 break;
         }
@@ -110,7 +112,7 @@ function getWebviewContent() {
                     const reader = new FileReader();
                     
                     reader.onload = function(e) {
-                        const filePath = e.target.result;
+                        const filePath = e.target.result; // Content of the file
                         vscode.postMessage({ command: 'convert', filePath, format });
                     };
                     
