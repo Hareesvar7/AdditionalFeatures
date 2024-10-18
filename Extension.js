@@ -1,21 +1,24 @@
 const vscode = require('vscode');
-const { savePolicyVersion, listPolicyVersions } = require('./commands');
+const { saveVersionCommand, listVersionsCommand } = require('./commands');
 
 function activate(context) {
-    console.log('Policy versioning extension is now active!');
-
-    // Register the savePolicyVersion command
-    let saveCommand = vscode.commands.registerCommand('extension.savePolicyVersion', () => {
-        savePolicyVersion();
+    // Register the save version command
+    let saveVersion = vscode.commands.registerCommand('extension.saveVersion', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            const filePath = editor.document.uri.fsPath;
+            saveVersionCommand(context, filePath);
+        } else {
+            vscode.window.showErrorMessage('No active file to version.');
+        }
     });
 
-    // Register the listPolicyVersions command
-    let listCommand = vscode.commands.registerCommand('extension.listPolicyVersions', () => {
-        listPolicyVersions();
+    // Register the list versions command
+    let listVersions = vscode.commands.registerCommand('extension.listVersions', () => {
+        listVersionsCommand();
     });
 
-    context.subscriptions.push(saveCommand);
-    context.subscriptions.push(listCommand);
+    context.subscriptions.push(saveVersion, listVersions);
 }
 
 function deactivate() {}
