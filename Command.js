@@ -1,39 +1,32 @@
-const vscode = require('vscode');
-const ComplianceReportService = require('../services/ComplianceReportService');
+const fs = require('fs');
 const path = require('path');
+const PDFDocument = require('pdfkit');
 
-module.exports = function generateComplianceReport() {
-    return vscode.commands.registerCommand('extension.generateComplianceReport', async function () {
-        const planJsonUri = await vscode.window.showOpenDialog({
-            canSelectFiles: true,
-            canSelectMany: false,
-            filters: { 'JSON Files': ['json'] }
-        });
+async function generateReport(reportData) {
+    const doc = new PDFDocument();
+    const reportDir = path.join(__dirname, 'download', 'reports');
+    const reportFile = path.join(reportDir, 'compliance_report.pdf');
 
-        if (!planJsonUri) {
-            vscode.window.showErrorMessage('Plan.json not selected!');
-            return;
-        }
+    // Create the report directory if it doesn't exist
+    if (!fs.existsSync(reportDir)) {
+        fs.mkdirSync(reportDir, { recursive: true });
+    }
 
-        const policyRegoUri = await vscode.window.showOpenDialog({
-            canSelectFiles: true,
-            canSelectMany: false,
-            filters: { 'Rego Files': ['rego'] }
-        });
+    // Pipe the PDF to a file
+    doc.pipe(fs.createWriteStream(reportFile));
 
-        if (!policyRegoUri) {
-            vscode.window.showErrorMessage('Policy.rego not selected!');
-            return;
-        }
+    // Title
+    doc.fontSize(20).text('Compliance Report', { align: 'center' });
+    doc.moveDown();
 
-        // Generate PDF Report
-        const reportPath = await ComplianceReportService.generateReport(planJsonUri[0].fsPath, policyRegoUri[0].fsPath);
+    // Add report content
+    doc.fontSize(12).text(reportData, { align: 'left' });
+    
+    doc.end();
+    
+    return reportFile;
+}
 
-        if (reportPath) {
-            vscode.window.showInformationMessage(`Compliance report generated at: ${reportPath}`);
-            vscode.env.openExternal(vscode.Uri.file(reportPath)); // Open the PDF file
-        } else {
-            vscode.window.showErrorMessage('Failed to generate compliance report.');
-        }
-    });
+module.exports = {
+    generateReport
 };
