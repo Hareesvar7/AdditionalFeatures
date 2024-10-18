@@ -1,38 +1,29 @@
 const vscode = require('vscode');
-const PolicyVersioningService = require('./PolicyVersioningService');
+const PolicyVersioningService = require('../services/PolicyVersioningService');
 
-class VersioningCommand {
-    constructor(context) {
-        this.context = context;
-        this.policyFilePath = ''; // Set this to your current policy file path
-        this.versioningService = new PolicyVersioningService(this.policyFilePath);
+async function versionPolicy(context) {
+    // Prompt user to select a .rego file
+    const fileUri = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        filters: {
+            'Rego Files': ['rego']
+        }
+    });
+
+    if (!fileUri || fileUri.length === 0) {
+        vscode.window.showErrorMessage('No file selected.');
+        return;
     }
 
-    // Command to save a version
-    saveVersion() {
-        this.versioningService.saveVersion();
-        vscode.window.showInformationMessage('Policy version saved successfully.');
-    }
+    const policyPath = fileUri[0].fsPath;
 
-    // Command to list versions
-    async listVersions() {
-        const versions = this.versioningService.listVersions();
-        if (versions.length === 0) {
-            vscode.window.showInformationMessage('No versions found.');
-            return;
-        }
-        
-        const selectedVersion = await vscode.window.showQuickPick(
-            versions.map(version => version.name),
-            { placeHolder: 'Select a version to revert' }
-        );
-
-        if (selectedVersion) {
-            const versionToRevert = versions.find(v => v.name === selectedVersion);
-            this.versioningService.revertToVersion(versionToRevert.path);
-            vscode.window.showInformationMessage(`Reverted to version: ${selectedVersion}`);
-        }
+    // Call the versioning service to save the policy
+    const result = await PolicyVersioningService.savePolicyVersion(policyPath);
+    if (result) {
+        vscode.window.showInformationMessage(`Policy version saved: ${result}`);
+    } else {
+        vscode.window.showErrorMessage('Failed to save policy version.');
     }
 }
 
-module.exports = VersioningCommand;
+module.exports = versionPolicy;
