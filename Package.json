@@ -1,26 +1,70 @@
 {
-    "name": "rego-s3-auto-complete",
-    "displayName": "Rego S3 Auto-Completion",
-    "description": "A VS Code extension for AWS S3 Rego policy auto-completion.",
+    "name": "policyPilot",
+    "displayName": "PolicyPilot",
+    "description": "A tool for managing OPA policies with cloud service selection, validation, AI assistance, and visualization features.",
     "version": "0.0.1",
-    "publisher": "your-name",
+    "publisher": "your_name",
     "engines": {
         "vscode": "^1.60.0"
     },
     "activationEvents": [
-        "onLanguage:rego"
+        "onLanguage:rego", // Add this line to activate on .rego files
+        "onCommand:extension.showCloudServiceSelection",
+        "onCommand:extension.validateOPA",
+        "onCommand:extension.aiAssist",
+        "onCommand:extension.visualizePolicies",
+        "onCommand:extension.autoCompleteS3Policies" // Activation for the auto-complete command
     ],
-    "main": "./src/Extension.js",
+    "main": "./Extension.js",
     "contributes": {
-        "languages": [{
-            "id": "rego",
-            "extensions": [".rego"],
-            "aliases": ["Rego"]
-        }],
-        "snippets": [{
-            "language": "rego",
-            "path": "./snippets/rego-s3-snippets.json"
-        }]
+        "commands": [
+            {
+                "command": "extension.showCloudServiceSelection",
+                "title": "Show Cloud Service Selection"
+            },
+            {
+                "command": "extension.validateOPA",
+                "title": "Validate OPA Policies"
+            },
+            {
+                "command": "extension.aiAssist",
+                "title": "AI Assist"
+            },
+            {
+                "command": "extension.visualizePolicies",
+                "title": "Visualize Policies"
+            },
+            {
+                "command": "extension.autoCompleteS3Policies", // Add auto-completion command
+                "title": "Auto Complete S3 Policies"
+            }
+        ],
+        "languages": [
+            {
+                "id": "rego",
+                "extensions": [".rego"],
+                "aliases": ["Rego"]
+            }
+        ],
+        "snippets": [
+            {
+                "language": "rego",
+                "path": "./src/awsS3Snippets.code-snippets" // Register snippets file
+            }
+        ]
     },
-    "dependencies": {}
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./out/extension.js"
+    },
+    "devDependencies": {
+        "typescript": "^4.4.4",
+        "@types/node": "^16.9.1",
+        "@types/vscode": "^1.60.0"
+    },
+    "dependencies": {
+        // Add any additional dependencies here
+    }
 }
