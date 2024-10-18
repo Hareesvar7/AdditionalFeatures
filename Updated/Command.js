@@ -11,23 +11,24 @@ async function visualizePolicies(context) {
         vscode.ViewColumn.One,
         {
             enableScripts: true,
-            retainContextWhenHidden: true // Keep the context when the panel is hidden
+            localResourceRoots: [] // Add any resources here if needed
         }
     );
 
-    // Set the HTML content for the webview with a file upload option
-    panel.webview.html = VisualizationService.getUploadHTML();
+    // Set the HTML content for the webview
+    panel.webview.html = VisualizationService.getVisualizationHTML();
 
-    // Handle messages from the webview
+    // Listen for messages from the webview
     panel.webview.onDidReceiveMessage(async (message) => {
         switch (message.command) {
-            case 'upload':
-                const policies = await VisualizationService.getPolicies(message.filePath);
-                if (policies) {
-                    panel.webview.postMessage({ command: 'visualize', data: policies });
-                } else {
-                    panel.webview.postMessage({ command: 'error', text: 'No policies found to visualize.' });
+            case 'uploadFile':
+                // Process the uploaded policies
+                const policies = await VisualizationService.processPolicies(message.data);
+                if (!policies) {
+                    vscode.window.showErrorMessage('No policies found to visualize.');
+                    return;
                 }
+                panel.webview.html = VisualizationService.getVisualizationHTML(policies);
                 break;
         }
     });
