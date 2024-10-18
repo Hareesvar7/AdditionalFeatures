@@ -18,6 +18,25 @@ class LintingService {
                     });
                 }
             }
+
+            // New Rule: Check for valid deny statement syntax
+            if (trimmedLine.startsWith('deny[')) {
+                const denyMessageMatch = trimmedLine.match(/msg\s*=\s*sprintf"([^"]+)",\s*(.*)/);
+                if (!denyMessageMatch) {
+                    issues.push({
+                        line: index + 1,
+                        message: 'Deny statement must define a message with sprintf.'
+                    });
+                } else {
+                    const resourceMatch = lines[index - 1].match(/resource\s*:=\s*input\.resource_changes_/);
+                    if (!resourceMatch) {
+                        issues.push({
+                            line: index,
+                            message: 'Deny statement must have a valid resource assignment.'
+                        });
+                    }
+                }
+            }
         });
 
         return issues;
