@@ -3,140 +3,18 @@
 const fs = require('fs');
 
 class VisualizationService {
-    // Generate HTML for the upload interface and visualization
-    static getUploadHTML() {
-        return `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Policy Visualization</title>
-                <script src="https://d3js.org/d3.v7.min.js"></script>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        background-color: #f4f4f4;
-                        padding: 20px;
-                    }
-                    .upload-container {
-                        margin-bottom: 20px;
-                    }
-                    .header {
-                        background-color: #007bff;
-                        color: white;
-                        padding: 10px;
-                        border-radius: 5px;
-                        text-align: center;
-                    }
-                    #visualization {
-                        margin-top: 20px;
-                    }
-                    .node {
-                        cursor: pointer;
-                    }
-                    .node circle {
-                        fill: #fff;
-                        stroke: steelblue;
-                        stroke-width: 3px;
-                    }
-                    .node text {
-                        font: 12px sans-serif;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="header">Upload OPA Policy File</div>
-                <div class="upload-container">
-                    <input type="file" id="fileInput" accept=".rego">
-                    <button id="uploadBtn">Upload</button>
-                    <p id="errorMessage" style="color: red;"></p>
-                </div>
-                <div id="visualization"></div>
-
-                <script>
-                    const vscode = acquireVsCodeApi();
-
-                    document.getElementById('uploadBtn').addEventListener('click', () => {
-                        const fileInput = document.getElementById('fileInput');
-                        if (fileInput.files.length === 0) {
-                            document.getElementById('errorMessage').textContent = 'Please select a .rego file to upload.';
-                            return;
-                        }
-                        const filePath = fileInput.files[0].path;
-                        vscode.postMessage({ command: 'upload', filePath: filePath });
-                    });
-
-                    window.addEventListener('message', event => {
-                        const message = event.data;
-                        switch (message.command) {
-                            case 'visualize':
-                                visualizePolicies(message.data);
-                                break;
-                            case 'error':
-                                document.getElementById('errorMessage').textContent = message.text;
-                                break;
-                        }
-                    });
-
-                    function visualizePolicies(policyGroups) {
-                        const visualizationDiv = d3.select('#visualization');
-                        visualizationDiv.selectAll('*').remove(); // Clear previous visualization
-
-                        const width = 960;
-                        const height = 500;
-
-                        const svg = visualizationDiv.append('svg')
-                            .attr('width', width)
-                            .attr('height', height);
-
-                        const root = d3.hierarchy({ children: policyGroups });
-
-                        const treeLayout = d3.tree().size([height, width - 160]);
-                        treeLayout(root);
-
-                        // Nodes
-                        const nodes = svg.append('g').attr('transform', 'translate(80,0)').selectAll('.node')
-                            .data(root.descendants())
-                            .enter().append('g')
-                            .attr('class', 'node')
-                            .attr('transform', d => `translate(${d.y},${d.x})`)
-                            .on('click', d => console.log('Clicked on node:', d.data));
-
-                        nodes.append('circle').attr('r', 5);
-
-                        nodes.append('text')
-                            .attr('dy', 3)
-                            .attr('x', d => d.children ? -8 : 8)
-                            .style('text-anchor', d => d.children ? 'end' : 'start')
-                            .text(d => d.data.label);
-
-                        // Links
-                        svg.append('g').attr('transform', 'translate(80,0)').selectAll('.link')
-                            .data(root.links())
-                            .enter().append('path')
-                            .attr('class', 'link')
-                            .attr('d', d3.linkHorizontal()
-                                .x(d => d.y)
-                                .y(d => d.x));
-                    }
-                </script>
-            </body>
-            </html>
-        `;
-    }
-
-    static async getPolicies(filePath) {
+    // Process uploaded Rego policies
+    static async processPolicies(policies) {
         try {
-            const policies = fs.readFileSync(filePath, 'utf8');
-            return this.processPolicies(policies);
+            return this.processPoliciesContent(policies);
         } catch (err) {
-            console.error("Error reading policies:", err);
+            console.error("Error processing policies:", err);
             return null;
         }
     }
 
-    static processPolicies(policies) {
+    // Process policies dynamically based on keywords like deny, allow, resource.type, etc.
+    static processPoliciesContent(policies) {
         const lines = policies.split('\n');
         const policyGroups = [];
         let currentPolicy = [];
@@ -145,6 +23,7 @@ class VisualizationService {
         lines.forEach((line) => {
             const trimmedLine = line.trim();
 
+            // Detect and start a new deny/allow rule
             if (trimmedLine.startsWith('deny') || trimmedLine.startsWith('allow')) {
                 if (currentPolicy.length) {
                     policyGroups.push(currentPolicy);
@@ -154,6 +33,7 @@ class VisualizationService {
                 currentPolicy.push({ id: currentRule, label: `Rule: ${currentRule}. Defines the action taken for this policy.` });
             }
 
+            // Detect resource change type
             if (trimmedLine.includes('resource_change.type')) {
                 const resourceType = this.extractResourceType(trimmedLine);
                 if (resourceType !== 'unknown') {
@@ -161,6 +41,7 @@ class VisualizationService {
                 }
             }
 
+            // Detect change after and before
             if (trimmedLine.includes('resource_change.change.after')) {
                 currentPolicy.push({ id: 'Change After', label: 'Change After: Evaluates the new state of the resource.' });
             }
@@ -168,15 +49,18 @@ class VisualizationService {
                 currentPolicy.push({ id: 'Change Before', label: 'Change Before: Evaluates the previous state of the resource.' });
             }
 
+            // Detect not condition
             if (trimmedLine.includes('not')) {
                 currentPolicy.push({ id: 'Not Condition', label: 'Not Condition: Checks for the absence of a condition.' });
             }
 
+            // Detect message
             if (trimmedLine.includes('msg')) {
                 const message = this.extractMessage(trimmedLine);
                 currentPolicy.push({ id: `Message: ${message}`, label: `Message: ${message}. Displays an informative message based on evaluation.` });
             }
 
+            // Detect other conditions dynamically
             if (trimmedLine.includes('input.')) {
                 currentPolicy.push({ id: `Condition: ${trimmedLine}`, label: `Condition: ${trimmedLine}. Checks a specific input condition relevant to the policy.` });
             }
@@ -197,6 +81,102 @@ class VisualizationService {
     static extractMessage(line) {
         const match = line.match(/msg == "(.*?)"/);
         return match ? match[1] : 'unknown';
+    }
+
+    // Generate HTML for visualization with Go.js
+    static getVisualizationHTML(policyGroups) {
+        const treeData = this.prepareTreeData(policyGroups);
+
+        return `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Policy Visualization</title>
+                <script src="https://unpkg.com/gojs/release/go.js"></script>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        background-color: #f4f4f4;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        flex-direction: column;
+                        height: 100vh;
+                        margin: 0;
+                    }
+                    .header {
+                        background-color: #007bff;
+                        color: white;
+                        padding: 10px;
+                        border-radius: 5px;
+                        text-align: center;
+                        width: 80%;
+                        max-width: 800px;
+                        margin: 20px auto;
+                    }
+                    #policyDiagram {
+                        width: 90%;
+                        height: 600px;
+                        max-width: 1000px;
+                        margin: 20px auto;
+                        border: 1px solid #ccc;
+                        background-color: white;
+                        padding: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">Visualize OPA Policy</div>
+                <div id="policyDiagram"></div>
+
+                <script>
+                    const $ = go.GraphObject.make;
+
+                    const myDiagram = $(go.Diagram, "policyDiagram", {
+                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 30 }) // Adjusted layer spacing for smaller gaps
+                    });
+
+                    myDiagram.nodeTemplate =
+                        $(go.Node, "Horizontal",
+                            { padding: 5 },
+                            new go.Binding("background", "color"), // Bind node color to a property
+                            $(go.TextBlock, "Default Text",
+                                { margin: 5, stroke: "black", font: "bold 14px sans-serif" },
+                                new go.Binding("text", "label"))
+                        );
+
+                    myDiagram.linkTemplate =
+                        $(go.Link,
+                            $(go.Shape, { strokeWidth: 2, stroke: "#333" }),
+                            $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
+                        );
+
+                    myDiagram.model = new go.TreeModel(${JSON.stringify(treeData)});
+                </script>
+            </body>
+            </html>
+        `;
+    }
+
+    // Prepare tree data for Go.js visualization
+    static prepareTreeData(policyGroups) {
+        const nodes = [];
+        let keyCounter = 0;
+
+        policyGroups.forEach((group, groupIndex) => {
+            const color = groupIndex % 2 === 0 ? "#ffcccb" : "#add8e6"; // Alternate colors for policies
+            group.forEach((policy, index) => {
+                if (index === 0) {
+                    nodes.push({ key: keyCounter++, label: policy.label, color: color });
+                } else {
+                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label, color: color });
+                }
+            });
+        });
+
+        return nodes;
     }
 }
 
