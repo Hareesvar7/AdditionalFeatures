@@ -1,0 +1,72 @@
+[
+    {
+        "Enforce S3 Access Points in VPC Only": {
+            "prefix": "s3-vpc-access",
+            "body": [
+                "deny[msg] {",
+                "    resource := input.resource_changes[_]",
+                "    resource.type == \"aws_s3_access_point\"",
+                "    not resource.change.after.vpc_configuration",
+                "    msg = sprintf(\"S3 Access Point '%s' must be configured in a VPC\", [resource.change.after.name])",
+                "}"
+            ],
+            "description": "Enforce S3 Access Points in VPC Only"
+        }
+    },
+    {
+        "Enforce Public Access Blocks on S3 Access Points": {
+            "prefix": "s3-public-access-block",
+            "body": [
+                "deny[msg] {",
+                "    resource := input.resource_changes[_]",
+                "    resource.type == \"aws_s3_access_point\"",
+                "    not resource.change.after.public_access_block",
+                "    msg = sprintf(\"S3 Access Point '%s' must have public access blocks enabled\", [resource.change.after.name])",
+                "}"
+            ],
+            "description": "Enforce Public Access Blocks on S3 Access Points"
+        }
+    },
+    {
+        "Enforce Account-Level Public Access Blocks": {
+            "prefix": "s3-account-public-access",
+            "body": [
+                "deny[msg] {",
+                "    resource := input.resource_changes[_]",
+                "    resource.type == \"aws_s3_bucket\"",
+                "    not resource.change.after.account_level_public_access_block",
+                "    msg = sprintf(\"S3 bucket '%s' must have account-level public access blocks enabled\", [resource.change.after.bucket])",
+                "}"
+            ],
+            "description": "Enforce Account-Level Public Access Blocks"
+        }
+    },
+    {
+        "Prohibit ACLs on S3 Buckets": {
+            "prefix": "s3-prohibit-acl",
+            "body": [
+                "deny[msg] {",
+                "    resource := input.resource_changes[_]",
+                "    resource.type == \"aws_s3_bucket\"",
+                "    resource.change.after.acl != \"private\"",
+                "    msg = sprintf(\"S3 bucket '%s' must not use ACLs\", [resource.change.after.bucket])",
+                "}"
+            ],
+            "description": "Prohibit ACLs on S3 Buckets"
+        }
+    },
+    {
+        "Prohibit Blacklisted Actions on S3 Buckets": {
+            "prefix": "s3-blacklist-action",
+            "body": [
+                "deny[msg] {",
+                "    resource := input.resource_changes[_]",
+                "    resource.type == \"aws_s3_bucket\"",
+                "    action := resource.change.after.blacklisted_actions[_]",
+                "    msg = sprintf(\"S3 bucket '%s' contains blacklisted action '%s'\", [resource.change.after.bucket, action])",
+                "}"
+            ],
+            "description": "Prohibit Blacklisted Actions on S3 Buckets"
+        }
+    }
+]
