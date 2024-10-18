@@ -2,12 +2,11 @@ const vscode = require('vscode');
 const versionPolicy = require('./commands/PolicyVersioningCommand');
 
 function activate(context) {
-    // Register the command for versioning policies
-    const versionPolicyCommand = vscode.commands.registerCommand('your-extension.versionPolicy', () => {
-        versionPolicy(context);
-    });
+    // Register the version policy command
+    let disposable = vscode.commands.registerCommand('extension.versionPolicy', versionPolicy);
+    context.subscriptions.push(disposable);
 
-    context.subscriptions.push(versionPolicyCommand);
+    // Other existing commands can be registered here
 }
 
 function deactivate() {}
