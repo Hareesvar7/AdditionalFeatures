@@ -1,8 +1,6 @@
 // src/services/VisualizationService.js
 
 const fs = require('fs');
-const express = require('express');
-const bodyParser = require('body-parser');
 
 class VisualizationService {
     static getVisualizationHTML() {
@@ -41,31 +39,28 @@ class VisualizationService {
                         const [fileContent, setFileContent] = React.useState('');
                         const [error, setError] = React.useState('');
 
-                        const handleFileUpload = async (event) => {
+                        const handleFileUpload = (event) => {
                             const file = event.target.files[0];
                             if (file && file.name.endsWith('.rego')) {
                                 const reader = new FileReader();
-                                reader.onload = async (e) => {
+                                reader.onload = (e) => {
                                     const content = e.target.result;
-                                    try {
-                                        const response = await fetch('http://localhost:3000/visualize', { // Use the correct URL
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json'
-                                            },
-                                            body: JSON.stringify({ content })
-                                        });
-                                        if (!response.ok) throw new Error('Network response was not ok');
-                                        const result = await response.json();
-                                        setFileContent(JSON.stringify(result, null, 2));
-                                    } catch (err) {
-                                        setError('Error communicating with server: ' + err.message);
-                                    }
+                                    setFileContent(content);
+                                    setError('');
+                                    // Call a function to visualize policies
+                                    visualizePolicies(content);
                                 };
                                 reader.readAsText(file);
                             } else {
                                 setError('Please upload a valid .rego file.');
                             }
+                        };
+
+                        const visualizePolicies = (content) => {
+                            // Process and display the policies directly
+                            // Here you can call your visualization logic (if any)
+                            console.log("Policies visualized:", content);
+                            // You could parse and display the content as needed
                         };
 
                         return h(Container, { maxWidth: "md" },
@@ -82,7 +77,7 @@ class VisualizationService {
                                 color: "primary",
                                 style: { marginTop: '20px' },
                                 onClick: () => {
-                                    // Here you could also handle visualization logic if needed
+                                    // Optionally, handle any other visualization action
                                 }
                             }, "Visualize Policies"),
                             h('pre', { style: { whiteSpace: 'pre-wrap' } }, fileContent)
@@ -96,30 +91,10 @@ class VisualizationService {
         `;
     }
 
-    static async processPolicies(content) {
+    static processPolicies(content) {
         // Implement your logic to process the .rego content and return structured data
         return { policies: content.split('\n').filter(line => line.trim() !== '') };
     }
-
-    // Add express server setup for handling requests
-    static startServer() {
-        const app = express();
-        app.use(bodyParser.json());
-
-        app.post('/visualize', async (req, res) => {
-            const { content } = req.body;
-            const policies = await this.processPolicies(content);
-            res.json(policies);
-        });
-
-        const PORT = 3000; // Choose a port
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
-        });
-    }
 }
-
-// Start the server when the extension is activated
-VisualizationService.startServer();
 
 module.exports = VisualizationService;
