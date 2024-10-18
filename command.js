@@ -1,81 +1,59 @@
-// src/commands/ConverterCommand.js
+// src/commands/ConvertPolicyCommand.js
 
 const vscode = require('vscode');
-const ConverterService = require('../services/ConverterService');
+const ConvertPolicyService = require('../services/ConvertPolicyService');
 
-async function openConverterWebview(context) {
-    const panel = vscode.window.createWebviewPanel(
-        'policyConverter',
-        'Policy Converter',
-        vscode.ViewColumn.One,
-        {
-            enableScripts: true
-        }
-    );
-
-    // Set the HTML content for the webview
-    panel.webview.html = getWebviewContent();
-
-    // Handle messages from the webview
-    panel.webview.onDidReceiveMessage(async (message) => {
-        switch (message.command) {
-            case 'convertPolicy':
-                const convertedPolicy = ConverterService.convertPolicy(message.policyContent, message.outputFormat);
-                panel.webview.postMessage({ command: 'setConvertedPolicy', policyContent: convertedPolicy });
-                break;
+async function convertPolicy(context) {
+    const fileUri = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        filters: {
+            'Rego Files': ['rego']
         }
     });
-}
 
-// Generate the HTML for the webview
-function getWebviewContent() {
-    return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Policy Converter</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                #convertedPolicy { margin-top: 20px; white-space: pre; }
-            </style>
-        </head>
-        <body>
-            <h1>Convert Policy</h1>
-            <textarea id="policyInput" rows="10" cols="50" placeholder="Enter Rego policy here..."></textarea><br>
-            <label><input type="radio" name="format" value="json" checked> JSON</label>
-            <label><input type="radio" name="format" value="yaml"> YAML</label><br>
-            <button onclick="convertPolicy()">Convert</button>
-            <h2>Converted Policy</h2>
-            <div id="convertedPolicy"></div>
+    if (!fileUri || fileUri.length === 0) {
+        vscode.window.showErrorMessage('No file selected.');
+        return;
+    }
 
-            <script>
-                const vscode = acquireVsCodeApi();
-                function convertPolicy() {
-                    const policyContent = document.getElementById('policyInput').value;
-                    const outputFormat = document.querySelector('input[name="format"]:checked').value;
-                    
-                    // Send a message to the extension to convert the policy
-                    vscode.postMessage({
-                        command: 'convertPolicy',
-                        policyContent: policyContent,
-                        outputFormat: outputFormat
-                    });
-                }
+    const formatChoice = await vscode.window.showQuickPick(['JSON', 'YAML'], {
+        placeHolder: 'Select format for conversion'
+    });
 
-                window.addEventListener('message', event => {
-                    const message = event.data;
-                    switch (message.command) {
-                        case 'setConvertedPolicy':
-                            document.getElementById('convertedPolicy').textContent = message.policyContent;
-                            break;
+    if (!formatChoice) {
+        vscode.window.showErrorMessage('No format selected.');
+        return;
+    }
+
+    const convertedPolicy = await ConvertPolicyService.convertPolicy(fileUri[0].fsPath, formatChoice);
+    
+    if (convertedPolicy) {
+        const panel = vscode.window.createWebviewPanel(
+            'policyConversion',
+            'Policy Conversion',
+            vscode.ViewColumn.One,
+            { enableScripts: true }
+        );
+
+        panel.webview.html = `
+            <html>
+            <body>
+                <h1>Converted Policy</h1>
+                <pre>${convertedPolicy}</pre>
+                <button onclick="copyToClipboard()">Copy to Clipboard</button>
+                <script>
+                    function copyToClipboard() {
+                        navigator.clipboard.writeText(\`${convertedPolicy}\`).then(() => {
+                            alert('Copied to clipboard');
+                        });
                     }
-                });
-            </script>
-        </body>
-        </html>
-    `;
+                </script>
+            </body>
+            </html>
+        `;
+    } else {
+        vscode.window.showErrorMessage('Conversion failed.');
+    }
 }
 
-module.exports = openConverterWebview;
+module.exports = convertPolicy;
