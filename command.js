@@ -2,9 +2,10 @@
 
 const vscode = require('vscode');
 const ConvertPolicyService = require('../services/ConvertPolicyService');
+const fs = require('fs');
+const path = require('path');
 
 async function convertPolicy(context) {
-    // Open a webview for input
     const panel = vscode.window.createWebviewPanel(
         'policyConversion',
         'Policy Conversion',
@@ -14,7 +15,6 @@ async function convertPolicy(context) {
 
     panel.webview.html = getWebviewContent();
 
-    // Listen for messages from the webview
     panel.webview.onDidReceiveMessage(async message => {
         switch (message.command) {
             case 'convert':
@@ -39,11 +39,52 @@ function getWebviewContent() {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Convert Rego Policy</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    padding: 20px;
+                    background-color: #f5f5f5;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                }
+                h1 {
+                    font-size: 24px;
+                    color: #333;
+                }
+                input[type="text"], select {
+                    width: 100%;
+                    padding: 10px;
+                    margin: 10px 0;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                }
+                button {
+                    background-color: #007acc;
+                    color: white;
+                    border: none;
+                    padding: 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 16px;
+                }
+                button:hover {
+                    background-color: #005f99;
+                }
+                pre {
+                    background-color: #eaeaea;
+                    padding: 10px;
+                    border-radius: 4px;
+                    overflow-x: auto;
+                    white-space: pre-wrap; /* Wrap text */
+                    word-wrap: break-word; /* Break long words */
+                }
+            </style>
         </head>
         <body>
             <h1>Convert Rego Policy</h1>
-            <label for="filePath">Rego File Path:</label>
-            <input type="text" id="filePath" placeholder="Enter path to .rego file" />
+            <label for="fileInput">Upload Rego File:</label>
+            <input type="file" id="fileInput" accept=".rego" />
             <br />
             <label for="format">Select Format:</label>
             <select id="format">
@@ -57,9 +98,23 @@ function getWebviewContent() {
                 const vscode = acquireVsCodeApi();
 
                 document.getElementById('convertButton').onclick = () => {
-                    const filePath = document.getElementById('filePath').value;
+                    const fileInput = document.getElementById('fileInput');
                     const format = document.getElementById('format').value;
-                    vscode.postMessage({ command: 'convert', filePath, format });
+
+                    if (fileInput.files.length === 0) {
+                        alert('Please select a file to upload.');
+                        return;
+                    }
+
+                    const file = fileInput.files[0];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const filePath = e.target.result;
+                        vscode.postMessage({ command: 'convert', filePath, format });
+                    };
+                    
+                    reader.readAsText(file);
                 };
 
                 window.addEventListener('message', event => {
