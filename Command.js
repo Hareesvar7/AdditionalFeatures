@@ -1,70 +1,59 @@
-const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 
-const policyDir = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
+// Save version
+async function saveVersionCommand(context, filePath) {
+    try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const versionDir = path.join(process.env.HOME || process.env.USERPROFILE, 'Downloads', 'opaVersion');
 
-// Ensure the policyDir exists or create it if not exists
-if (!fs.existsSync(policyDir)) {
-    fs.mkdirSync(policyDir, { recursive: true });
+        // Create version directory if it doesn't exist
+        if (!fs.existsSync(versionDir)) {
+            fs.mkdirSync(versionDir, { recursive: true });
+        }
+
+        // Create a unique versioned file name based on timestamp
+        const fileName = path.basename(filePath);
+        const timestamp = new Date().toISOString().replace(/:/g, '-');
+        const versionedFile = path.join(versionDir, `${fileName}-${timestamp}.rego`);
+
+        // Write file to the version directory
+        fs.writeFileSync(versionedFile, content);
+        vscode.window.showInformationMessage(`Saved version: ${versionedFile}`);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Error saving version: ${err.message}`);
+    }
 }
 
-// Save the version of the .rego file
-function savePolicyVersion() {
-    const options = {
-        canSelectMany: false,
-        openLabel: 'Select a .rego file to version',
-        filters: {
-            'Rego Files': ['rego']
-        }
-    };
+// List versions
+async function listVersionsCommand() {
+    try {
+        const versionDir = path.join(process.env.HOME || process.env.USERPROFILE, 'Downloads', 'opaVersion');
 
-    vscode.window.showOpenDialog(options).then(fileUri => {
-        if (fileUri && fileUri[0]) {
-            const filePath = fileUri[0].fsPath;
-            const fileName = path.basename(filePath);
-            const versionedFileName = `${fileName.replace('.rego', '')}_v${Date.now()}.rego`;
-            const targetPath = path.join(policyDir, versionedFileName);
-
-            // Copy the .rego file into opaVersion directory with version info
-            fs.copyFile(filePath, targetPath, err => {
-                if (err) {
-                    vscode.window.showErrorMessage(`Error saving version: ${err.message}`);
-                } else {
-                    vscode.window.showInformationMessage(`Policy version saved as ${versionedFileName}`);
-                }
-            });
-        }
-    });
-}
-
-// List all saved versions in the opaVersion directory
-function listPolicyVersions() {
-    fs.readdir(policyDir, (err, files) => {
-        if (err) {
-            vscode.window.showErrorMessage(`Error listing versions: ${err.message}`);
+        if (!fs.existsSync(versionDir)) {
+            vscode.window.showErrorMessage('No versions found.');
             return;
         }
 
+        const files = fs.readdirSync(versionDir);
         if (files.length === 0) {
-            vscode.window.showInformationMessage('No saved policy versions found.');
+            vscode.window.showInformationMessage('No versions available.');
         } else {
-            const regoFiles = files.filter(file => file.endsWith('.rego'));
-            vscode.window.showQuickPick(regoFiles, {
-                placeHolder: 'Select a policy version to view'
-            }).then(selectedFile => {
-                if (selectedFile) {
-                    const filePath = path.join(policyDir, selectedFile);
+            vscode.window.showQuickPick(files).then(selected => {
+                if (selected) {
+                    const filePath = path.join(versionDir, selected);
                     vscode.workspace.openTextDocument(filePath).then(doc => {
                         vscode.window.showTextDocument(doc);
                     });
                 }
             });
         }
-    });
+    } catch (err) {
+        vscode.window.showErrorMessage(`Error listing versions: ${err.message}`);
+    }
 }
 
 module.exports = {
-    savePolicyVersion,
-    listPolicyVersions
+    saveVersionCommand,
+    listVersionsCommand
 };
