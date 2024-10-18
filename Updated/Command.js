@@ -10,8 +10,7 @@ async function visualizePolicies(context) {
         'Policy Visualization',
         vscode.ViewColumn.One,
         {
-            enableScripts: true,
-            retainContextWhenHidden: true, // Retain context when hidden
+            enableScripts: true
         }
     );
 
