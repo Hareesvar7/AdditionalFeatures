@@ -1,0 +1,38 @@
+{
+    "name": "policy-manager",
+    "displayName": "Policy Manager",
+    "description": "A VS Code extension for managing OPA policies.",
+    "version": "1.0.0",
+    "publisher": "your-username",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "activationEvents": [
+        "onCommand:extension.savePolicyVersion",
+        "onCommand:extension.listPolicyVersions"
+    ],
+    "main": "./Extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "extension.savePolicyVersion",
+                "title": "Save Policy Version",
+                "category": "Policy Management"
+            },
+            {
+                "command": "extension.listPolicyVersions",
+                "title": "List Policy Versions",
+                "category": "Policy Management"
+            }
+        ]
+    },
+    "scripts": {
+        "test": "echo \"No tests specified\" && exit 0"
+    },
+    "dependencies": {
+        "fs-extra": "^10.0.0" // Optional: Use this if you prefer fs-extra for file operations
+    },
+    "devDependencies": {
+        "@types/node": "^16.0.0"
+    }
+}
