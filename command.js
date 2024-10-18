@@ -13,8 +13,8 @@ async function convertPolicy(context) {
 
     panel.webview.onDidReceiveMessage(async (message) => {
         if (message.command === 'convertPolicy') {
-            const { filePath, format } = message;
-            const result = await ConversionService.convertPolicy(filePath, format);
+            const { fileContent, format } = message;
+            const result = await ConversionService.convertPolicy(fileContent, format);
 
             if (result.success) {
                 panel.webview.postMessage({ command: 'displayOutput', content: result.data });
@@ -53,7 +53,7 @@ function getWebviewContent() {
                     reader.onload = function() {
                         vscode.postMessage({
                             command: 'convertPolicy',
-                            filePath: reader.result,
+                            fileContent: reader.result,
                             format: format
                         });
                     };
