@@ -3,7 +3,7 @@
 const fs = require('fs');
 
 class VisualizationService {
-    // Generate HTML for the upload interface
+    // Generate HTML for the upload interface and visualization
     static getUploadHTML() {
         return `
             <!DOCTYPE html>
@@ -12,6 +12,7 @@ class VisualizationService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Policy Visualization</title>
+                <script src="https://d3js.org/d3.v7.min.js"></script>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -28,11 +29,19 @@ class VisualizationService {
                         border-radius: 5px;
                         text-align: center;
                     }
-                    #fileInput {
-                        margin: 10px 0;
-                    }
                     #visualization {
-                        display: none;
+                        margin-top: 20px;
+                    }
+                    .node {
+                        cursor: pointer;
+                    }
+                    .node circle {
+                        fill: #fff;
+                        stroke: steelblue;
+                        stroke-width: 3px;
+                    }
+                    .node text {
+                        font: 12px sans-serif;
                     }
                 </style>
             </head>
@@ -71,61 +80,45 @@ class VisualizationService {
                     });
 
                     function visualizePolicies(policyGroups) {
-                        const visualizationDiv = document.getElementById('visualization');
-                        visualizationDiv.innerHTML = '';
-                        visualizationDiv.style.display = 'block';
+                        const visualizationDiv = d3.select('#visualization');
+                        visualizationDiv.selectAll('*').remove(); // Clear previous visualization
 
-                        // Generate visualization content
-                        const treeData = prepareTreeData(policyGroups);
-                        visualizationDiv.innerHTML = createVisualizationHTML(treeData);
-                    }
+                        const width = 960;
+                        const height = 500;
 
-                    function prepareTreeData(policyGroups) {
-                        const nodes = [];
-                        let keyCounter = 0;
+                        const svg = visualizationDiv.append('svg')
+                            .attr('width', width)
+                            .attr('height', height);
 
-                        policyGroups.forEach((group, groupIndex) => {
-                            const color = groupIndex % 2 === 0 ? "#ffcccb" : "#add8e6"; // Alternate colors for policies
-                            group.forEach((policy, index) => {
-                                if (index === 0) {
-                                    nodes.push({ key: keyCounter++, label: policy.label, color: color });
-                                } else {
-                                    nodes.push({ key: keyCounter++, parent: keyCounter - 2, label: policy.label, color: color });
-                                }
-                            });
-                        });
+                        const root = d3.hierarchy({ children: policyGroups });
 
-                        return nodes;
-                    }
+                        const treeLayout = d3.tree().size([height, width - 160]);
+                        treeLayout(root);
 
-                    function createVisualizationHTML(treeData) {
-                        const nodes = JSON.stringify(treeData);
-                        return `
-                            <div id="policyDiagram" style="width: 90%; height: 600px; border: 1px solid #ccc; background-color: white; padding: 10px;"></div>
-                            <script src="https://unpkg.com/gojs/release/go.js"></script>
-                            <script>
-                                const $ = go.GraphObject.make;
-                                const myDiagram = $(go.Diagram, "policyDiagram", {
-                                    layout: $(go.TreeLayout, { angle: 90, layerSpacing: 30 })
-                                });
+                        // Nodes
+                        const nodes = svg.append('g').attr('transform', 'translate(80,0)').selectAll('.node')
+                            .data(root.descendants())
+                            .enter().append('g')
+                            .attr('class', 'node')
+                            .attr('transform', d => `translate(${d.y},${d.x})`)
+                            .on('click', d => console.log('Clicked on node:', d.data));
 
-                                myDiagram.nodeTemplate =
-                                    $(go.Node, "Horizontal",
-                                        { padding: 5 },
-                                        $(go.TextBlock, "Default Text",
-                                            { margin: 5, stroke: "black", font: "bold 14px sans-serif" },
-                                            new go.Binding("text", "label"))
-                                    );
+                        nodes.append('circle').attr('r', 5);
 
-                                myDiagram.linkTemplate =
-                                    $(go.Link,
-                                        $(go.Shape, { strokeWidth: 2, stroke: "#333" }),
-                                        $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
-                                    );
+                        nodes.append('text')
+                            .attr('dy', 3)
+                            .attr('x', d => d.children ? -8 : 8)
+                            .style('text-anchor', d => d.children ? 'end' : 'start')
+                            .text(d => d.data.label);
 
-                                myDiagram.model = new go.TreeModel(${nodes});
-                            </script>
-                        `;
+                        // Links
+                        svg.append('g').attr('transform', 'translate(80,0)').selectAll('.link')
+                            .data(root.links())
+                            .enter().append('path')
+                            .attr('class', 'link')
+                            .attr('d', d3.linkHorizontal()
+                                .x(d => d.y)
+                                .y(d => d.x));
                     }
                 </script>
             </body>
