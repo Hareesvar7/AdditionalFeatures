@@ -4,9 +4,22 @@ class LintingService {
     static lintPolicy(policyText) {
         const issues = [];
         const lines = policyText.split('\n');
+        let packageKeywordFound = false;
 
         lines.forEach((line, index) => {
             const trimmedLine = line.trim();
+
+            // Rule: Check for the presence of the 'package' keyword
+            if (trimmedLine.startsWith('package ')) {
+                if (packageKeywordFound) {
+                    issues.push({
+                        line: index + 1,
+                        message: 'Only one package declaration is allowed.'
+                    });
+                } else {
+                    packageKeywordFound = true; // Mark that we found the package keyword
+                }
+            }
 
             // Rule: Check if comments have more than 7 words
             if (trimmedLine.startsWith('#')) {
@@ -18,26 +31,15 @@ class LintingService {
                     });
                 }
             }
-
-            // New Rule: Check for valid deny statement syntax
-            if (trimmedLine.startsWith('deny[')) {
-                const denyMessageMatch = trimmedLine.match(/msg\s*=\s*sprintf"([^"]+)",\s*(.*)/);
-                if (!denyMessageMatch) {
-                    issues.push({
-                        line: index + 1,
-                        message: 'Deny statement must define a message with sprintf.'
-                    });
-                } else {
-                    const resourceMatch = lines[index - 1].match(/resource\s*:=\s*input\.resource_changes_/);
-                    if (!resourceMatch) {
-                        issues.push({
-                            line: index,
-                            message: 'Deny statement must have a valid resource assignment.'
-                        });
-                    }
-                }
-            }
         });
+
+        // If no package keyword was found, add an issue
+        if (!packageKeywordFound) {
+            issues.push({
+                line: 1,
+                message: 'The policy must include a package declaration (e.g., package aws.s3.policies).'
+            });
+        }
 
         return issues;
     }
