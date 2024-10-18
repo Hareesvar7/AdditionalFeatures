@@ -1,40 +1,35 @@
-// src/services/ConverterService.js
+// src/services/ConvertPolicyService.js
 
-const YAML = require('yaml');
+const fs = require('fs');
+const yaml = require('js-yaml');
 
-class ConverterService {
-    static convertPolicy(policyContent, outputFormat) {
+class ConvertPolicyService {
+    static async convertPolicy(filePath, format) {
         try {
-            // Parse the Rego policy content
-            const policyObject = this.parseRego(policyContent);
+            // Read the Rego file
+            const regoPolicy = fs.readFileSync(filePath, 'utf8');
+            const json = this.convertToJSON(regoPolicy);
+            const yamlFormat = this.convertToYAML(regoPolicy);
 
-            // Convert to the desired format
-            if (outputFormat === 'json') {
-                return JSON.stringify(policyObject, null, 2);
-            } else if (outputFormat === 'yaml') {
-                return YAML.stringify(policyObject);
-            }
-        } catch (error) {
-            console.error("Conversion error:", error);
-            return "Error converting policy.";
+            // Return the converted policy in the requested format
+            return format === 'JSON' ? json : yamlFormat;
+        } catch (err) {
+            console.error("Error converting policy:", err);
+            return null;
         }
     }
 
-    static parseRego(policyContent) {
-        // A basic parsing logic to transform Rego to a JS object.
-        const lines = policyContent.split('\n');
-        const policyObject = {};
+    static convertToJSON(rego) {
+        // Conversion logic to JSON
+        const jsonObject = { policy: rego };
+        return JSON.stringify(jsonObject, null, 2); // Formatting with 2 spaces
+    }
 
-        lines.forEach(line => {
-            const trimmedLine = line.trim();
-            if (trimmedLine) {
-                const [key, value] = trimmedLine.split(':');
-                policyObject[key.trim()] = value ? value.trim() : null;
-            }
-        });
-
-        return policyObject;
+    static convertToYAML(rego) {
+        // Conversion logic to YAML
+        const yamlObject = { policy: rego };
+        return yaml.dump(yamlObject); // Using js-yaml to convert to YAML
     }
 }
 
-module.exports = ConverterService;
+module.exports = ConvertPolicyService;
