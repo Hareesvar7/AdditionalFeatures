@@ -1,11 +1,9 @@
 const fs = require('fs');
 
 function convertRegoToJson(regoContent) {
-    // Extracting resource changes and constructing the policy message
     const resourceChanges = [];
     let policyMessage = "";
 
-    // Split content into lines for processing
     const lines = regoContent.split('\n');
 
     lines.forEach(line => {
@@ -18,7 +16,7 @@ function convertRegoToJson(regoContent) {
                     type: typeMatch[1],
                     change: {
                         after: {
-                            vpc_configuration: null, // Default value, update as needed
+                            vpc_configuration: null, // Default value
                             name: "" // Placeholder for name
                         }
                     }
@@ -29,7 +27,6 @@ function convertRegoToJson(regoContent) {
         // Check for VPC configuration
         if (line.includes('not resource.change.after.vpc_configuration')) {
             if (resourceChanges.length > 0) {
-                // Set vpc_configuration to null as required
                 resourceChanges[resourceChanges.length - 1].change.after.vpc_configuration = null;
             }
         }
@@ -38,7 +35,6 @@ function convertRegoToJson(regoContent) {
         const msgMatch = line.match(/msg = sprintf"(.*?)", (.*?)/);
         if (msgMatch) {
             const messageTemplate = msgMatch[1];
-            // Get the last resource name
             if (resourceChanges.length > 0) {
                 const resourceName = resourceChanges[resourceChanges.length - 1].change.after.name || "example-s3-access-point";
                 policyMessage = messageTemplate.replace("%s", resourceName);
@@ -70,7 +66,6 @@ function convertRegoToJson(regoContent) {
 
 async function convertPolicy(regoFilePath) {
     try {
-        // Read the Rego file content
         const regoContent = fs.readFileSync(regoFilePath, 'utf8');
         const convertedJson = convertRegoToJson(regoContent);
         return { success: true, data: convertedJson };
