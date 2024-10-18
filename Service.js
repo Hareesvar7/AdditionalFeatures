@@ -1,41 +1,35 @@
 const fs = require('fs');
 const yaml = require('js-yaml');
-const opa = require('opa'); // Use an OPA library to handle Rego policies
 
 class ConversionService {
-    // Parse and convert Rego to JSON
-    static convertToJSON(regoPolicy) {
+    static async convertPolicy(filePath, format) {
         try {
-            const parsedPolicy = opa.parse(regoPolicy);
-            const jsonPolicy = JSON.stringify(parsedPolicy, null, 2); // Pretty print JSON
-            return jsonPolicy;
+            const regoContent = fs.readFileSync(filePath, 'utf8');
+
+            // Implement a parser for Rego files to convert them
+            const converted = this.parseRegoToFormat(regoContent, format);
+
+            return { success: true, data: converted };
         } catch (err) {
-            console.error("Error converting Rego to JSON:", err);
-            return null;
+            return { success: false, error: err.message };
         }
     }
 
-    // Convert Rego to YAML
-    static convertToYAML(regoPolicy) {
-        try {
-            const parsedPolicy = opa.parse(regoPolicy);
-            const yamlPolicy = yaml.dump(parsedPolicy); // Use yaml library to convert to YAML
-            return yamlPolicy;
-        } catch (err) {
-            console.error("Error converting Rego to YAML:", err);
-            return null;
-        }
-    }
+    static parseRegoToFormat(regoContent, format) {
+        // Example logic for parsing Rego and converting
+        let jsonOutput;
 
-    // Method to evaluate the converted JSON with plan.json
-    static evaluatePolicy(policyJSON, planJSON) {
         try {
-            // Use OPA's evaluator to check the converted policy against the input plan
-            const result = opa.evaluate(JSON.parse(policyJSON), planJSON);
-            return result;
+            // Rego to JSON conversion
+            jsonOutput = JSON.parse(regoContent); // Replace with actual parsing logic
         } catch (err) {
-            console.error("Error evaluating policy:", err);
-            return null;
+            throw new Error('Failed to parse Rego content to JSON');
+        }
+
+        if (format === 'yaml') {
+            return yaml.dump(jsonOutput);
+        } else {
+            return JSON.stringify(jsonOutput, null, 2); // Format JSON with spacing
         }
     }
 }
