@@ -1,0 +1,26 @@
+{
+    "name": "rego-s3-auto-complete",
+    "displayName": "Rego S3 Auto-Completion",
+    "description": "A VS Code extension for AWS S3 Rego policy auto-completion.",
+    "version": "0.0.1",
+    "publisher": "your-name",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "activationEvents": [
+        "onLanguage:rego"
+    ],
+    "main": "./src/Extension.js",
+    "contributes": {
+        "languages": [{
+            "id": "rego",
+            "extensions": [".rego"],
+            "aliases": ["Rego"]
+        }],
+        "snippets": [{
+            "language": "rego",
+            "path": "./snippets/rego-s3-snippets.json"
+        }]
+    },
+    "dependencies": {}
+}
