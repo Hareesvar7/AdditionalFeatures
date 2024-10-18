@@ -1,0 +1,30 @@
+{
+  "name": "your-extension",
+  "version": "0.0.1",
+  "main": "./src/Extension.js",
+  "activationEvents": [
+    "onCommand:extension.saveFile",
+    "onCommand:extension.generateReport"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.saveFile",
+        "title": "Save File"
+      },
+      {
+        "command": "extension.generateReport",
+        "title": "Generate Compliance Report"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "postinstall": "node ./out/extension.js"
+  },
+  "dependencies": {
+    // Add any dependencies your extension needs
+  }
+}
