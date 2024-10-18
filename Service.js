@@ -1,40 +1,61 @@
 const fs = require('fs');
 
 function convertRegoToJson(regoContent) {
+    // Extracting resource changes and constructing the policy message
     const resourceChanges = [];
     let policyMessage = "";
 
+    // Split content into lines for processing
     const lines = regoContent.split('\n');
 
     lines.forEach(line => {
-        // Extract resource type
-        const resourceMatch = line.match(/resource\.type == "(.*?)"/);
+        // Match for resource type
+        const resourceMatch = line.match(/resource := input.resource_changes_/);
         if (resourceMatch) {
-            resourceChanges.push({
-                type: resourceMatch[1],
-                change: {
-                    after: {}
-                }
-            });
+            const typeMatch = line.match(/resource\.type == "(.*?)"/);
+            if (typeMatch) {
+                resourceChanges.push({
+                    type: typeMatch[1],
+                    change: {
+                        after: {
+                            vpc_configuration: null, // Default value, update as needed
+                            name: "" // Placeholder for name
+                        }
+                    }
+                });
+            }
         }
 
-        // Extract VPC configuration check
+        // Check for VPC configuration
         if (line.includes('not resource.change.after.vpc_configuration')) {
             if (resourceChanges.length > 0) {
+                // Set vpc_configuration to null as required
                 resourceChanges[resourceChanges.length - 1].change.after.vpc_configuration = null;
             }
         }
 
-        // Extract message from sprintf
-        const msgMatch = line.match(/msg\s*=\s*sprintf"(.*?)", (.*?)/);
+        // Extract message using sprintf
+        const msgMatch = line.match(/msg = sprintf"(.*?)", (.*?)/);
         if (msgMatch) {
             const messageTemplate = msgMatch[1];
-            // Assuming there's a reference to resource.change.after.name
-            const resourceName = "example-s3-access-point"; // Hardcoded for demonstration
-            policyMessage = messageTemplate.replace("%s", resourceName);
+            // Get the last resource name
+            if (resourceChanges.length > 0) {
+                const resourceName = resourceChanges[resourceChanges.length - 1].change.after.name || "example-s3-access-point";
+                policyMessage = messageTemplate.replace("%s", resourceName);
+            }
+        }
+
+        // Match for resource name to capture it
+        const nameMatch = line.match(/resource.change.after.name\s*=\s*"(.*?)"/);
+        if (nameMatch) {
+            const resourceName = nameMatch[1];
+            if (resourceChanges.length > 0) {
+                resourceChanges[resourceChanges.length - 1].change.after.name = resourceName;
+            }
         }
     });
 
+    // Construct the final JSON output
     const jsonOutput = {
         resource_changes: resourceChanges,
         policy: {
@@ -49,6 +70,7 @@ function convertRegoToJson(regoContent) {
 
 async function convertPolicy(regoFilePath) {
     try {
+        // Read the Rego file content
         const regoContent = fs.readFileSync(regoFilePath, 'utf8');
         const convertedJson = convertRegoToJson(regoContent);
         return { success: true, data: convertedJson };
