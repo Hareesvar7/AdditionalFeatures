@@ -101,31 +101,30 @@ class VisualizationService {
                     function createVisualizationHTML(treeData) {
                         const nodes = JSON.stringify(treeData);
                         return `
-                            <div id="policyDiagram" style="width: 90%; height: 600px; border: 1px solid #ccc; background-color: white; padding: 10px;">
-                                <script src="https://unpkg.com/gojs/release/go.js"></script>
-                                <script>
-                                    const $ = go.GraphObject.make;
-                                    const myDiagram = $(go.Diagram, "policyDiagram", {
-                                        layout: $(go.TreeLayout, { angle: 90, layerSpacing: 30 })
-                                    });
+                            <div id="policyDiagram" style="width: 90%; height: 600px; border: 1px solid #ccc; background-color: white; padding: 10px;"></div>
+                            <script src="https://unpkg.com/gojs/release/go.js"></script>
+                            <script>
+                                const $ = go.GraphObject.make;
+                                const myDiagram = $(go.Diagram, "policyDiagram", {
+                                    layout: $(go.TreeLayout, { angle: 90, layerSpacing: 30 })
+                                });
 
-                                    myDiagram.nodeTemplate =
-                                        $(go.Node, "Horizontal",
-                                            { padding: 5 },
-                                            $(go.TextBlock, "Default Text",
-                                                { margin: 5, stroke: "black", font: "bold 14px sans-serif" },
-                                                new go.Binding("text", "label"))
-                                        );
+                                myDiagram.nodeTemplate =
+                                    $(go.Node, "Horizontal",
+                                        { padding: 5 },
+                                        $(go.TextBlock, "Default Text",
+                                            { margin: 5, stroke: "black", font: "bold 14px sans-serif" },
+                                            new go.Binding("text", "label"))
+                                    );
 
-                                    myDiagram.linkTemplate =
-                                        $(go.Link,
-                                            $(go.Shape, { strokeWidth: 2, stroke: "#333" }),
-                                            $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
-                                        );
+                                myDiagram.linkTemplate =
+                                    $(go.Link,
+                                        $(go.Shape, { strokeWidth: 2, stroke: "#333" }),
+                                        $(go.Shape, { toArrow: "OpenTriangle", stroke: "#333", fill: null })
+                                    );
 
-                                    myDiagram.model = new go.TreeModel(${nodes});
-                                </script>
-                            </div>
+                                myDiagram.model = new go.TreeModel(${nodes});
+                            </script>
                         `;
                     }
                 </script>
