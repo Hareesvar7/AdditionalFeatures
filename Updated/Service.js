@@ -47,15 +47,20 @@ class VisualizationService {
                                 const reader = new FileReader();
                                 reader.onload = async (e) => {
                                     const content = e.target.result;
-                                    const response = await fetch('/visualize', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({ content })
-                                    });
-                                    const result = await response.json();
-                                    setFileContent(JSON.stringify(result, null, 2));
+                                    try {
+                                        const response = await fetch('http://localhost:3000/visualize', { // Use the correct URL
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({ content })
+                                        });
+                                        if (!response.ok) throw new Error('Network response was not ok');
+                                        const result = await response.json();
+                                        setFileContent(JSON.stringify(result, null, 2));
+                                    } catch (err) {
+                                        setError('Error communicating with server: ' + err.message);
+                                    }
                                 };
                                 reader.readAsText(file);
                             } else {
@@ -93,7 +98,6 @@ class VisualizationService {
 
     static async processPolicies(content) {
         // Implement your logic to process the .rego content and return structured data
-        // For demonstration, let's return the content as is for now
         return { policies: content.split('\n').filter(line => line.trim() !== '') };
     }
 
@@ -104,8 +108,7 @@ class VisualizationService {
 
         app.post('/visualize', async (req, res) => {
             const { content } = req.body;
-            // Process the content of the .rego file and generate the visualization data
-            const policies = await this.processPolicies(content); // Make sure to implement processPolicies to handle string input
+            const policies = await this.processPolicies(content);
             res.json(policies);
         });
 
