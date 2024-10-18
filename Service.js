@@ -8,27 +8,53 @@ class ConvertPolicyService {
         try {
             // Read the Rego file
             const regoPolicy = fs.readFileSync(filePath, 'utf8');
-            const json = this.convertToJSON(regoPolicy);
-            const yamlFormat = this.convertToYAML(regoPolicy);
 
-            // Return the converted policy in the requested format
-            return format === 'JSON' ? json : yamlFormat;
+            // Parse the Rego policy into a structured object
+            const parsedPolicy = this.parseRegoPolicy(regoPolicy);
+
+            // Convert based on the chosen format
+            return format === 'JSON' ? this.convertToJSON(parsedPolicy) : this.convertToYAML(parsedPolicy);
         } catch (err) {
             console.error("Error converting policy:", err);
             return null;
         }
     }
 
-    static convertToJSON(rego) {
-        // Conversion logic to JSON
-        const jsonObject = { policy: rego };
-        return JSON.stringify(jsonObject, null, 2); // Formatting with 2 spaces
+    static parseRegoPolicy(rego) {
+        const policyLines = rego.split('\n');
+        const policyObj = { policies: [] };
+        
+        let currentPolicy = {};
+
+        policyLines.forEach(line => {
+            const trimmedLine = line.trim();
+
+            if (trimmedLine.startsWith('package')) {
+                policyObj.package = trimmedLine.split(' ')[1];
+            } else if (trimmedLine.startsWith('deny') || trimmedLine.startsWith('allow')) {
+                if (currentPolicy.id) {
+                    policyObj.policies.push(currentPolicy);
+                }
+                currentPolicy = { id: trimmedLine, conditions: [] };
+            } else if (trimmedLine) { // Non-empty line
+                currentPolicy.conditions.push(trimmedLine);
+            }
+        });
+
+        // Push the last policy if exists
+        if (currentPolicy.id) {
+            policyObj.policies.push(currentPolicy);
+        }
+
+        return policyObj;
     }
 
-    static convertToYAML(rego) {
-        // Conversion logic to YAML
-        const yamlObject = { policy: rego };
-        return yaml.dump(yamlObject); // Using js-yaml to convert to YAML
+    static convertToJSON(policyObject) {
+        return JSON.stringify(policyObject, null, 2);
+    }
+
+    static convertToYAML(policyObject) {
+        return yaml.dump(policyObject);
     }
 }
 
