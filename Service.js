@@ -1,3 +1,5 @@
+// src/services/ConverterService.js
+
 const YAML = require('yaml');
 
 class ConverterService {
@@ -20,7 +22,6 @@ class ConverterService {
 
     static parseRego(policyContent) {
         // A basic parsing logic to transform Rego to a JS object.
-        // You may need a more sophisticated parser depending on your requirements.
         const lines = policyContent.split('\n');
         const policyObject = {};
 
