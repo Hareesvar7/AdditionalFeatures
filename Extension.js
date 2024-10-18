@@ -1,13 +1,18 @@
 const vscode = require('vscode');
-const VersioningCommand = require('./versioningCommand');
+const versionPolicy = require('./commands/PolicyVersioningCommand');
 
 function activate(context) {
-    const versioningCommand = new VersioningCommand(context);
+    // Register the command for versioning policies
+    const versionPolicyCommand = vscode.commands.registerCommand('your-extension.versionPolicy', () => {
+        versionPolicy(context);
+    });
 
-    context.subscriptions.push(
-        vscode.commands.registerCommand('extension.savePolicyVersion', () => versioningCommand.saveVersion()),
-        vscode.commands.registerCommand('extension.listPolicyVersions', () => versioningCommand.listVersions())
-    );
+    context.subscriptions.push(versionPolicyCommand);
 }
 
-exports.activate = activate;
+function deactivate() {}
+
+module.exports = {
+    activate,
+    deactivate
+};
