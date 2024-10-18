@@ -1,12 +1,21 @@
 const vscode = require('vscode');
-const policyVersionCommand = require('./commands/PolicyVersionCommand');
+const { savePolicyVersion, listPolicyVersions } = require('./commands');
 
 function activate(context) {
-    // Register the policy version command
-    let disposable = vscode.commands.registerCommand('extension.policyVersion', policyVersionCommand);
-    context.subscriptions.push(disposable);
+    console.log('Policy versioning extension is now active!');
 
-    // Other existing commands can be registered here
+    // Register the savePolicyVersion command
+    let saveCommand = vscode.commands.registerCommand('extension.savePolicyVersion', () => {
+        savePolicyVersion();
+    });
+
+    // Register the listPolicyVersions command
+    let listCommand = vscode.commands.registerCommand('extension.listPolicyVersions', () => {
+        listPolicyVersions();
+    });
+
+    context.subscriptions.push(saveCommand);
+    context.subscriptions.push(listCommand);
 }
 
 function deactivate() {}
