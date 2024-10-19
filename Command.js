@@ -1,21 +1,29 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const PDFDocument = require('pdfkit');
+const PDFDocument = require('pdfkit'); // For generating PDF reports
 
-// Function to log audit data
+// Directory paths
+const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
+const logDirectory = path.join(require('os').homedir(), 'Downloads', 'logs');
+const reportDirectory = path.join(require('os').homedir(), 'Downloads', 'reports');
+
+// Ensure directories exist
+if (!fs.existsSync(versionDirectory)) {
+    fs.mkdirSync(versionDirectory, { recursive: true });
+}
+if (!fs.existsSync(logDirectory)) {
+    fs.mkdirSync(logDirectory, { recursive: true });
+}
+if (!fs.existsSync(reportDirectory)) {
+    fs.mkdirSync(reportDirectory, { recursive: true });
+}
+
+// Log audit data
 async function logAuditData(action, details) {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] ACTION: ${action}\nDETAILS: ${details}\n\n`;
-
-    const logDirectory = path.join(require('os').homedir(), 'Downloads', 'logs');
-    if (!fs.existsSync(logDirectory)) {
-        fs.mkdirSync(logDirectory, { recursive: true });
-    }
-
     const logFilePath = path.join(logDirectory, 'audit.log');
-
-    // Append the log message to the file
     fs.appendFile(logFilePath, logMessage, (err) => {
         if (err) {
             vscode.window.showErrorMessage('Failed to write to audit log.');
@@ -23,7 +31,7 @@ async function logAuditData(action, details) {
     });
 }
 
-// Function to save version of the current file
+// Save the current file version
 async function saveVersionWithLog() {
     const editor = vscode.window.activeTextEditor;
 
@@ -35,22 +43,15 @@ async function saveVersionWithLog() {
     const document = editor.document;
     const content = document.getText();
     const filePath = document.uri.fsPath;
-
-    const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
-    if (!fs.existsSync(versionDirectory)) {
-        fs.mkdirSync(versionDirectory, { recursive: true });
-    }
-
     const versionFilePath = path.join(versionDirectory, path.basename(filePath));
-    fs.writeFileSync(versionFilePath, content);
 
-    const logDetails = `File version saved: ${versionFilePath}`;
-    await logAuditData('Save File Version', logDetails);
+    fs.writeFileSync(versionFilePath, content);
+    await logAuditData('Save File Version', `File version saved: ${versionFilePath}`);
 
     vscode.window.showInformationMessage(`File version saved: ${versionFilePath}`);
 }
 
-// Function to list saved versions of the current file
+// List saved versions for the current file
 async function listSavedVersions() {
     const editor = vscode.window.activeTextEditor;
 
@@ -59,80 +60,74 @@ async function listSavedVersions() {
         return;
     }
 
-    const fileName = path.basename(editor.document.uri.fsPath);
-    const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
+    const document = editor.document;
+    const currentFileName = path.basename(document.uri.fsPath);
+    const files = fs.readdirSync(versionDirectory).filter(file => file.startsWith(currentFileName));
 
-    if (!fs.existsSync(versionDirectory)) {
-        vscode.window.showErrorMessage('No saved versions found.');
-        return;
-    }
-
-    const files = fs.readdirSync(versionDirectory).filter(file => file === fileName);
     if (files.length === 0) {
-        vscode.window.showInformationMessage('No versions saved for this file yet.');
+        vscode.window.showInformationMessage('No saved versions found for the current file.');
     } else {
         const fileList = files.join('\n');
-        vscode.window.showInformationMessage(`Saved file versions:\n${fileList}`);
-
-        const logDetails = `Listed file versions for: ${fileName}`;
-        await logAuditData('List File Versions', logDetails);
+        vscode.window.showInformationMessage(`Saved versions for ${currentFileName}:\n${fileList}`);
     }
 }
 
-// Function to generate an audit report in PDF format
-async function generateComplianceReport(opaEvalOutput) {
-    const reportDirectory = path.join(require('os').homedir(), 'Downloads', 'reports');
-    if (!fs.existsSync(reportDirectory)) {
-        fs.mkdirSync(reportDirectory, { recursive: true });
+// Perform OPA evaluation dynamically
+async function performOpaEval() {
+    const evalCommand = await vscode.window.showInputBox({
+        prompt: 'Enter the OPA eval command (e.g., opa eval -i plan.json -d policy.rego "data")'
+    });
+
+    if (!evalCommand) {
+        vscode.window.showErrorMessage('No command entered.');
+        return;
     }
 
-    const pdfFilePath = path.join(reportDirectory, 'compliance_report.pdf');
+    const exec = require('child_process').exec;
+    exec(evalCommand, (error, stdout, stderr) => {
+        if (error) {
+            vscode.window.showErrorMessage(`Error executing OPA eval: ${stderr}`);
+            return;
+        }
+
+        const reportContent = generateReport(evalCommand, stdout);
+        saveReport(reportContent);
+
+        vscode.window.showInformationMessage('OPA eval executed and report generated.');
+    });
+}
+
+// Generate report content
+function generateReport(evalCommand, evalOutput) {
+    return `
+        OPA Evaluation Report
+        =====================
+
+        Command Executed: ${evalCommand}
+        Output:
+        ${evalOutput}
+    `;
+}
+
+// Save the generated report as a PDF
+function saveReport(content) {
+    const pdfFilePath = path.join(reportDirectory, 'opa_eval_report.pdf');
     const doc = new PDFDocument();
     const writeStream = fs.createWriteStream(pdfFilePath);
 
     doc.pipe(writeStream);
-    doc.fontSize(18).text('OPA Policy Compliance Audit Report', { align: 'center' });
+    doc.fontSize(18).text('OPA Evaluation Report', { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12);
-    
-    // Add dynamic OPA eval output
-    doc.text('OPA Evaluation Results:');
-    doc.moveDown();
-    doc.text(opaEvalOutput);
-
+    doc.fontSize(12).text(content);
     doc.end();
 
     writeStream.on('finish', () => {
-        vscode.window.showInformationMessage(`Compliance report generated: ${pdfFilePath}`);
+        vscode.window.showInformationMessage(`Report generated: ${pdfFilePath}`);
     });
 }
 
-// Function to perform OPA eval command and capture output
-async function performOpaEval() {
-    const terminal = vscode.window.createTerminal("OPA Eval");
-    const editor = vscode.window.activeTextEditor;
-
-    if (!editor) {
-        vscode.window.showErrorMessage('No active editor found. Please open a file to evaluate.');
-        return;
-    }
-
-    const planFilePath = path.join(require('os').homedir(), 'Downloads', 'opaVersion', 'plan.json'); // Example plan.json path
-    const policyFilePath = editor.document.uri.fsPath; // Current open file (policy.rego)
-
-    // Run OPA eval command
-    terminal.sendText(`opa eval -i ${planFilePath} -d ${policyFilePath} "data"`);
-
-    // Capture terminal output (you would need to listen to the terminal output in a real implementation)
-    // Here we simulate that output
-    const opaEvalOutput = `Evaluation result for ${policyFilePath}: Success`; // Placeholder for actual evaluation result
-    await generateComplianceReport(opaEvalOutput);
-}
-
-// Export commands
 module.exports = {
     saveVersionWithLog,
     listSavedVersions,
-    generateComplianceReport,
     performOpaEval
 };
