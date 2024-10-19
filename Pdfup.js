@@ -101,17 +101,21 @@ async function performOpaEval() {
     }
 
     const exec = require('child_process').exec;
+
+    vscode.window.setStatusBarMessage('Executing OPA evaluation...', 5000); // Notify user of execution
     exec(evalCommand, async (error, stdout, stderr) => {
         if (error) {
-            vscode.window.showErrorMessage(`Error executing OPA eval: ${stderr}`);
+            vscode.window.showErrorMessage(`Error executing OPA eval: ${stderr || error.message}`);
             return;
         }
+
+        vscode.window.showInformationMessage('OPA eval executed successfully. Generating report...'); // Notify success
 
         const policies = await extractPoliciesFromRego('policy.rego'); // Adjust the path as needed
         const reportContent = generateReport(evalCommand, stdout, policies);
         await saveReport(reportContent);
 
-        vscode.window.showInformationMessage('OPA eval executed and report generated.');
+        vscode.window.showInformationMessage('Report generated successfully.');
     });
 }
 
