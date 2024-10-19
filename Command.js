@@ -36,14 +36,20 @@ async function saveVersionWithLog() {
 
     const document = editor.document;
     const content = document.getText();
-    const filePath = document.uri.fsPath;
+    const originalFilePath = document.uri.fsPath;
 
+    // Create a new version file name with a timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-'); // Replace ":" and "." for valid filename
     const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
+
     if (!fs.existsSync(versionDirectory)) {
         fs.mkdirSync(versionDirectory, { recursive: true });
     }
 
-    const versionFilePath = path.join(versionDirectory, path.basename(filePath));
+    const versionFileName = `${path.basename(originalFilePath, path.extname(originalFilePath))}_v${timestamp}${path.extname(originalFilePath)}`;
+    const versionFilePath = path.join(versionDirectory, versionFileName);
+    
+    // Write the content to the new version file
     fs.writeFileSync(versionFilePath, content);
 
     const logDetails = `File version saved: ${versionFilePath}`;
