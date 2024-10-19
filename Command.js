@@ -3,12 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit'); // For generating PDF reports
 
-// Log audit data
+// Function to log audit data
 async function logAuditData(action, details) {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] ACTION: ${action}\nDETAILS: ${details}\n\n`;
-
     const logDirectory = path.join(require('os').homedir(), 'Downloads', 'logs');
+
+    // Ensure log directory exists
     if (!fs.existsSync(logDirectory)) {
         fs.mkdirSync(logDirectory, { recursive: true });
     }
@@ -17,7 +18,7 @@ async function logAuditData(action, details) {
     fs.appendFileSync(logFilePath, logMessage);
 }
 
-// Save the version of the currently open file
+// Function to save the version of the currently open file
 async function saveVersion() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -34,15 +35,15 @@ async function saveVersion() {
         fs.mkdirSync(versionDirectory, { recursive: true });
     }
 
-    const timestamp = new Date().toISOString().replace(/:/g, '-'); // Replace ':' to avoid issues in filenames
+    const timestamp = new Date().toISOString().replace(/:/g, '-'); // Format timestamp for filenames
     const versionFilePath = path.join(versionDirectory, `${path.basename(filePath)}_${timestamp}.txt`);
     fs.writeFileSync(versionFilePath, content);
 
-    logAuditData('Save File Version', `Version saved: ${versionFilePath}`);
+    await logAuditData('Save File Version', `Version saved: ${versionFilePath}`);
     vscode.window.showInformationMessage(`File version saved: ${versionFilePath}`);
 }
 
-// List saved versions of the currently open file
+// Function to list saved versions of the currently open file
 async function listSavedVersions() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -52,7 +53,7 @@ async function listSavedVersions() {
 
     const fileName = path.basename(editor.document.uri.fsPath);
     const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
-    
+
     if (!fs.existsSync(versionDirectory)) {
         vscode.window.showErrorMessage('No saved versions found.');
         return;
@@ -64,13 +65,21 @@ async function listSavedVersions() {
         return;
     }
 
-    const fileList = files.join('\n');
-    vscode.window.showInformationMessage(`Saved file versions:\n${fileList}`);
+    const fileList = files.map(file => `${file}`).join('\n');
+    const selectedFile = await vscode.window.showQuickPick(files, {
+        placeHolder: 'Select a version to open',
+    });
 
-    logAuditData('List File Versions', `Listed versions for: ${fileName}`);
+    if (selectedFile) {
+        const selectedFilePath = path.join(versionDirectory, selectedFile);
+        const document = await vscode.workspace.openTextDocument(selectedFilePath);
+        await vscode.window.showTextDocument(document);
+    }
+
+    await logAuditData('List File Versions', `Listed versions for: ${fileName}`);
 }
 
-// Generate an audit report in PDF format for OPA evaluations
+// Function to generate a compliance report in PDF format for OPA evaluations
 async function generateReport(evaluationData) {
     const reportDirectory = path.join(require('os').homedir(), 'Downloads', 'reports');
     if (!fs.existsSync(reportDirectory)) {
@@ -82,12 +91,14 @@ async function generateReport(evaluationData) {
     const writeStream = fs.createWriteStream(pdfFilePath);
 
     doc.pipe(writeStream);
-    doc.fontSize(18).text('OPA Evaluation Report', { align: 'center' });
+    doc.fontSize(18).text('OPA Compliance Evaluation Report', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12);
 
     // Add dynamic evaluation data to the report
-    doc.text(`Evaluation Data:\n${evaluationData}`);
+    doc.text(`Date: ${new Date().toISOString()}`);
+    doc.moveDown();
+    doc.text(`Evaluation Results:\n${evaluationData}`);
     
     // Additional structured sections can be added here
     doc.end();
