@@ -68,9 +68,24 @@ async function listSavedVersions() {
 
     if (files.length === 0) {
         vscode.window.showInformationMessage('No saved versions found for the current file.');
-    } else {
-        const fileList = files.join('\n');
-        vscode.window.showInformationMessage(`Saved versions for ${currentFileName}:\n${fileList}`);
+        return;
+    }
+
+    // Show the list in a QuickPick
+    const quickPickItems = files.map(file => ({
+        label: file,
+        description: 'Click to open version',
+        filePath: path.join(versionDirectory, file)
+    }));
+
+    const selected = await vscode.window.showQuickPick(quickPickItems, {
+        placeHolder: 'Select a version to open',
+    });
+
+    if (selected) {
+        const uri = vscode.Uri.file(selected.filePath);
+        const doc = await vscode.workspace.openTextDocument(uri);
+        vscode.window.showTextDocument(doc);
     }
 }
 
