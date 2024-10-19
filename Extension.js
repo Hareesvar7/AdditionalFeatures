@@ -7,10 +7,12 @@ function activate(context) {
     
     // Command to run OPA eval and generate a report
     const evaluateCommand = vscode.commands.registerCommand('extension.evaluateOpa', async () => {
-        const evaluationData = await performOpaEval(); // Call the simulated OPA eval function
+        const evaluationData = await performOpaEval(); // Call the OPA eval function
 
         // Generate a report for the OPA evaluation
-        await generateReport(evaluationData);
+        if (evaluationData) {
+            await generateReport(evaluationData);
+        }
     });
 
     context.subscriptions.push(saveCommand);
