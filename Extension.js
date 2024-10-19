@@ -8,7 +8,7 @@ function activate(context) {
     // Command to run OPA eval and generate a report
     const evaluateCommand = vscode.commands.registerCommand('extension.evaluateOpa', async () => {
         // Example dynamic evaluation data; replace this with actual eval data
-        const evaluationData = "OPA Evaluation result: Passed with warnings."; // Replace with actual results
+        const evaluationData = await performOpaEval(); // Replace with the actual eval logic
 
         // Generate a report for the OPA evaluation
         await generateReport(evaluationData);
@@ -17,6 +17,12 @@ function activate(context) {
     context.subscriptions.push(saveCommand);
     context.subscriptions.push(listCommand);
     context.subscriptions.push(evaluateCommand);
+}
+
+async function performOpaEval() {
+    // Placeholder for actual OPA evaluation logic
+    // Simulate evaluation results as a string for the report
+    return "OPA Evaluation result: Passed with warnings for S3 policies.";
 }
 
 function deactivate() {}
