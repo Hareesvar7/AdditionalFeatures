@@ -1,38 +1,64 @@
 {
-    "name": "opa-audit-log-extension",
-    "displayName": "OPA Audit Log with Report",
-    "description": "Extension to save, list file versions, and generate audit log reports",
-    "version": "1.1.0",
+    "name": "opa-policy-extension",
+    "displayName": "OPA Policy Extension",
+    "description": "A VS Code extension for managing OPA policies with compliance reporting.",
+    "version": "1.0.0",
+    "publisher": "[Your Publisher Name]",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/[YourRepo]/opa-policy-extension.git"
+    },
     "engines": {
-        "vscode": "^1.60.0"
+        "vscode": "^1.60.0" // Adjust based on the VS Code version you're targeting
     },
     "activationEvents": [
-        "onCommand:extension.saveVersion",
-        "onCommand:extension.listVersions",
-        "onCommand:extension.generateReport"
+        "onCommand:opaPolicyExtension.saveVersion",
+        "onCommand:opaPolicyExtension.listVersions",
+        "onCommand:opaPolicyExtension.performOpaEval"
     ],
-    "main": "./extension.js",
+    "main": "./Extension.js",
     "contributes": {
         "commands": [
             {
-                "command": "extension.saveVersion",
-                "title": "Save File Version"
+                "command": "opaPolicyExtension.saveVersion",
+                "title": "Save OPA Policy Version"
             },
             {
-                "command": "extension.listVersions",
-                "title": "List Saved Versions"
+                "command": "opaPolicyExtension.listVersions",
+                "title": "List Saved OPA Policy Versions"
             },
             {
-                "command": "extension.generateReport",
-                "title": "Generate Audit Report"
+                "command": "opaPolicyExtension.performOpaEval",
+                "title": "Perform OPA Evaluation"
             }
+        ],
+        "activationEvents": [
+            "onCommand:opaPolicyExtension.saveVersion",
+            "onCommand:opaPolicyExtension.listVersions",
+            "onCommand:opaPolicyExtension.performOpaEval"
         ]
     },
     "scripts": {
-        "test": "echo \"No tests specified\" && exit 1"
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./out/src/extension.js"
+    },
+    "devDependencies": {
+        "typescript": "^4.0.0",
+        "vscode": "^1.60.0",
+        "pdfkit": "^0.12.1" // Include PDFKit for report generation
     },
     "dependencies": {
-        "pdfkit": "^0.12.3",
-        "vscode": "^1.60.0"
+        "fs-extra": "^10.0.0" // Include fs-extra for enhanced file system operations (if needed)
+    },
+    "files": [
+        "out",
+        "src",
+        "package.json"
+    ],
+    "homepage": "https://github.com/[YourRepo]/opa-policy-extension",
+    "bugs": {
+        "url": "https://github.com/[YourRepo]/opa-policy-extension/issues"
     }
 }
