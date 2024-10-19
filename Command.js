@@ -1,6 +1,7 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const PDFDocument = require('pdfkit'); // PDFKit for generating PDF reports
 
 // Command to log audit data
 async function logAuditData(action, details) {
@@ -24,7 +25,7 @@ async function logAuditData(action, details) {
     });
 }
 
-// Example command: saving the file and logging it
+// Command to save the file version and log it
 async function saveVersionWithLog() {
     const editor = vscode.window.activeTextEditor;
 
@@ -51,7 +52,7 @@ async function saveVersionWithLog() {
     vscode.window.showInformationMessage(`File version saved: ${versionFilePath}`);
 }
 
-// Command to list versions (assuming versions are saved in Downloads/opaVersion)
+// Command to list saved versions and log it
 async function listSavedVersions() {
     const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
 
@@ -72,8 +73,44 @@ async function listSavedVersions() {
     }
 }
 
+// Command to generate an audit report in PDF format
+async function generateAuditReport() {
+    const logDirectory = path.join(require('os').homedir(), 'Downloads', 'logs');
+    const logFilePath = path.join(logDirectory, 'audit.log');
+
+    if (!fs.existsSync(logFilePath)) {
+        vscode.window.showErrorMessage('No audit log found to generate a report.');
+        return;
+    }
+
+    const reportDirectory = path.join(require('os').homedir(), 'Downloads', 'reports');
+    if (!fs.existsSync(reportDirectory)) {
+        fs.mkdirSync(reportDirectory, { recursive: true });
+    }
+
+    const pdfFilePath = path.join(reportDirectory, 'audit_report.pdf');
+
+    const doc = new PDFDocument();
+    const writeStream = fs.createWriteStream(pdfFilePath);
+
+    doc.pipe(writeStream);
+    doc.fontSize(18).text('Audit Log Report', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12);
+
+    // Read and append the log contents to the PDF
+    const logData = fs.readFileSync(logFilePath, 'utf8');
+    doc.text(logData);
+
+    doc.end();
+
+    writeStream.on('finish', () => {
+        vscode.window.showInformationMessage(`Audit report generated: ${pdfFilePath}`);
+    });
+}
+
 module.exports = {
-    logAuditData,
     saveVersionWithLog,
-    listSavedVersions
+    listSavedVersions,
+    generateAuditReport
 };
