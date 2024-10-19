@@ -2,6 +2,7 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
+const { exec } = require('child_process'); // Import exec for running shell commands
 
 // Command to log audit data
 async function logAuditData(action, details) {
@@ -81,27 +82,34 @@ async function listSavedVersions() {
     }
 }
 
+// Function to run OPA eval command and get the output
+function runOpaEval(planFile, policyFile) {
+    return new Promise((resolve, reject) => {
+        const command = `opa eval -i ${planFile} -d ${policyFile} "data"`;
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                reject(`Error: ${stderr}`);
+            } else {
+                resolve(stdout);
+            }
+        });
+    });
+}
+
 // Command to generate a compliance report in PDF format
 async function generateComplianceReport() {
-    // Sample data for demonstration purposes
-    const evaluatedResources = [
-        { name: "my-bucket", type: "AWS S3 Bucket", compliant: false },
-        { name: "my-iam-policy", type: "AWS IAM Policy", compliant: true },
-        { name: "my-security-group", type: "AWS Security Group", compliant: false },
-    ];
+    // Get the path to the plan.json and policy.rego files (assuming they are in the workspace)
+    const planFile = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'plan.json');
+    const policyFile = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'policy.rego');
 
-    const policyViolations = [
-        {
-            policy: "aws.s3.enforce-vpc-access",
-            description: "S3 Access Point 'example-s3-access-point' not configured in a VPC.",
-            recommendation: "Ensure all S3 Access Points have a valid VPC configuration.",
-        },
-        {
-            policy: "aws.security-group.restrict-ssh",
-            description: "SSH access is open to all IP addresses.",
-            recommendation: "Restrict SSH access to trusted IP addresses.",
-        },
-    ];
+    // Run OPA eval and capture the output
+    let evalOutput;
+    try {
+        evalOutput = await runOpaEval(planFile, policyFile);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Failed to run OPA eval: ${err}`);
+        return;
+    }
 
     const reportDirectory = path.join(require('os').homedir(), 'Downloads', 'reports');
     if (!fs.existsSync(reportDirectory)) {
@@ -124,26 +132,28 @@ async function generateComplianceReport() {
     doc.text('This report presents the evaluation results of converted Rego policies against defined policies using Open Policy Agent (OPA).');
     doc.moveDown();
 
-    // Resource Overview
-    doc.text('Resource Overview', { underline: true });
-    evaluatedResources.forEach(resource => {
-        doc.text(`- ${resource.type}: ${resource.name} - ${resource.compliant ? 'Compliant' : 'Non-Compliant'}`);
-    });
+    // OPA Eval Output
+    doc.text('OPA Evaluation Output', { underline: true });
+    doc.moveDown();
+    doc.text(evalOutput);
     doc.moveDown();
 
-    // Policy Violations
-    doc.text('Policy Violations', { underline: true });
-    policyViolations.forEach(violation => {
-        doc.text(`Policy: ${violation.policy}`);
-        doc.text(`Description: ${violation.description}`);
-        doc.text(`Recommendation: ${violation.recommendation}`);
-        doc.moveDown();
-    });
+    // Resource Overview (Dummy data for now)
+    doc.text('Resource Overview', { underline: true });
+    doc.text('- Resource A: Compliant');
+    doc.text('- Resource B: Non-Compliant');
+    doc.moveDown();
 
+    // Policy Violations (Dummy data for now)
+    doc.text('Policy Violations', { underline: true });
+    doc.text('Policy: example.policy');
+    doc.text('Description: Example violation');
+    doc.text('Recommendation: Update policy.');
+    
     // Conclusion
     doc.text('Conclusion', { underline: true });
     doc.text('This audit has identified non-compliance in certain resources. Please refer to the recommendations provided.');
-    
+
     doc.end();
 
     writeStream.on('finish', () => {
