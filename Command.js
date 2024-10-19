@@ -1,45 +1,79 @@
-// src/commands/command.js
-
+const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 
-// Directory path for logs
-const logsDir = path.join(__dirname, '../downloads/logs');
+// Command to log audit data
+async function logAuditData(action, details) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ACTION: ${action}\nDETAILS: ${details}\n\n`;
 
-// Ensure the logs directory exists
-if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
-}
+    const logDirectory = path.join(require('os').homedir(), 'Downloads', 'logs');
+    if (!fs.existsSync(logDirectory)) {
+        fs.mkdirSync(logDirectory, { recursive: true });
+    }
 
-// Log file path
-const logFilePath = path.join(logsDir, 'audit.log');
+    const logFilePath = path.join(logDirectory, 'audit.log');
 
-// Function to log actions
-function logAuditAction(action) {
-    const timestamp = new Date().toISOString(); // Create a timestamp
-    const logEntry = `${timestamp} - ${action}\n`; // Create a log entry format
-
-    // Append the log entry to the audit.log file
-    fs.appendFile(logFilePath, logEntry, (err) => {
+    // Append the log message to the file
+    fs.appendFile(logFilePath, logMessage, (err) => {
         if (err) {
-            console.error('Failed to log action:', err); // Handle error
+            vscode.window.showErrorMessage('Failed to write to audit log.');
+        } else {
+            vscode.window.showInformationMessage('Audit log updated successfully.');
         }
     });
 }
 
-// Example functions that log actions
-function saveFile(fileContent) {
-    // Logic to save the file would go here
-    logAuditAction('File saved successfully.'); // Log save action
+// Example command: saving the file and logging it
+async function saveVersionWithLog() {
+    const editor = vscode.window.activeTextEditor;
+
+    if (!editor) {
+        vscode.window.showErrorMessage('No active editor found.');
+        return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const filePath = document.uri.fsPath;
+
+    const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
+    if (!fs.existsSync(versionDirectory)) {
+        fs.mkdirSync(versionDirectory, { recursive: true });
+    }
+
+    const versionFilePath = path.join(versionDirectory, path.basename(filePath));
+    fs.writeFileSync(versionFilePath, content);
+
+    const logDetails = `File version saved: ${versionFilePath}`;
+    logAuditData('Save File Version', logDetails);
+
+    vscode.window.showInformationMessage(`File version saved: ${versionFilePath}`);
 }
 
-function generateReport(reportContent) {
-    // Logic to generate report would go here
-    logAuditAction('Compliance report generated successfully.'); // Log report generation
+// Command to list versions (assuming versions are saved in Downloads/opaVersion)
+async function listSavedVersions() {
+    const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
+
+    if (!fs.existsSync(versionDirectory)) {
+        vscode.window.showErrorMessage('No saved versions found.');
+        return;
+    }
+
+    const files = fs.readdirSync(versionDirectory);
+    if (files.length === 0) {
+        vscode.window.showInformationMessage('No file versions saved yet.');
+    } else {
+        const fileList = files.join('\n');
+        vscode.window.showInformationMessage(`Saved file versions:\n${fileList}`);
+
+        const logDetails = `Listed file versions from: ${versionDirectory}`;
+        logAuditData('List File Versions', logDetails);
+    }
 }
 
 module.exports = {
-    logAuditAction,
-    saveFile,
-    generateReport,
+    logAuditData,
+    saveVersionWithLog,
+    listSavedVersions
 };
