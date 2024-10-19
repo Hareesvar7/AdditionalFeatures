@@ -1,6 +1,7 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process'); // Import exec for command execution
 const PDFDocument = require('pdfkit'); // For generating PDF reports
 
 // Function to log audit data
@@ -65,7 +66,6 @@ async function listSavedVersions() {
         return;
     }
 
-    const fileList = files.map(file => `${file}`).join('\n');
     const selectedFile = await vscode.window.showQuickPick(files, {
         placeHolder: 'Select a version to open',
     });
@@ -108,9 +108,34 @@ async function generateReport(evaluationData) {
     });
 }
 
+// Function to perform OPA evaluation
+async function performOpaEval() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showErrorMessage('No active editor found for OPA evaluation.');
+        return;
+    }
+
+    const planFilePath = path.join(require('os').homedir(), 'Downloads', 'plan.json'); // Path to plan.json
+    const policyFilePath = editor.document.uri.fsPath; // Path to the currently open policy.rego file
+
+    return new Promise((resolve, reject) => {
+        const command = `opa eval -i ${planFilePath} -d ${policyFilePath} "data"`; // Command to execute
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                vscode.window.showErrorMessage(`Error during OPA eval: ${stderr}`);
+                reject(`Error: ${stderr}`);
+            } else {
+                resolve(stdout.trim()); // Resolve with the command output
+            }
+        });
+    });
+}
+
 module.exports = {
     saveVersion,
     listSavedVersions,
     generateReport,
-    logAuditData
+    logAuditData,
+    performOpaEval
 };
