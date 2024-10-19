@@ -101,21 +101,17 @@ async function performOpaEval() {
     }
 
     const exec = require('child_process').exec;
-
-    vscode.window.setStatusBarMessage('Executing OPA evaluation...', 5000); // Notify user of execution
     exec(evalCommand, async (error, stdout, stderr) => {
         if (error) {
-            vscode.window.showErrorMessage(`Error executing OPA eval: ${stderr || error.message}`);
+            vscode.window.showErrorMessage(`Error executing OPA eval: ${stderr}`);
             return;
         }
 
-        vscode.window.showInformationMessage('OPA eval executed successfully. Generating report...'); // Notify success
-
         const policies = await extractPoliciesFromRego('policy.rego'); // Adjust the path as needed
         const reportContent = generateReport(evalCommand, stdout, policies);
-        await saveReport(reportContent);
+        await saveReport(reportContent); // Save the report as PDF
 
-        vscode.window.showInformationMessage('Report generated successfully.');
+        vscode.window.showInformationMessage('OPA eval executed and report generated.');
     });
 }
 
@@ -193,18 +189,25 @@ function generateReport(evalCommand, evalOutput, policies) {
 // Save the generated report as a PDF
 async function saveReport(htmlContent) {
     const pdfFilePath = path.join(reportDirectory, 'opa_eval_report.pdf');
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    
-    await page.setContent(htmlContent);
-    await page.pdf({
-        path: pdfFilePath,
-        format: 'A4',
-        printBackground: true,
-    });
 
-    await browser.close();
-    vscode.window.showInformationMessage(`Report generated: ${pdfFilePath}`);
+    try {
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' }); // Ensure the content is fully loaded
+
+        await page.pdf({
+            path: pdfFilePath,
+            format: 'A4',
+            printBackground: true,
+        });
+
+        await browser.close();
+        vscode.window.showInformationMessage(`PDF report generated: ${pdfFilePath}`);
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        vscode.window.showErrorMessage(`Failed to generate PDF report: ${error.message}`);
+    }
 }
 
 module.exports = {
