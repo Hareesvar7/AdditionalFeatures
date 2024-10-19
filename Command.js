@@ -52,7 +52,7 @@ async function saveVersionWithLog() {
     vscode.window.showInformationMessage(`File version saved: ${versionFilePath}`);
 }
 
-// Command to list saved versions and log it
+// Command to list saved versions and open them in a new tab
 async function listSavedVersions() {
     const versionDirectory = path.join(require('os').homedir(), 'Downloads', 'opaVersion');
 
@@ -65,32 +65,24 @@ async function listSavedVersions() {
     if (files.length === 0) {
         vscode.window.showInformationMessage('No file versions saved yet.');
     } else {
-        // Enhance file listing with details like modified date and size
-        const fileDetails = files.map((file) => {
-            const filePath = path.join(versionDirectory, file);
-            const stats = fs.statSync(filePath);
-            const fileSizeInKB = (stats.size / 1024).toFixed(2);
-            const lastModified = stats.mtime.toLocaleString();
-            return `File: ${file}\nSize: ${fileSizeInKB} KB\nLast Modified: ${lastModified}\n`;
-        });
-
-        const formattedFileList = fileDetails.join('\n');
-        vscode.window.showInformationMessage(`Saved file versions:\n${formattedFileList}`);
-
-        // Optionally, use a QuickPick for better user interaction
+        // Use QuickPick to select a file
         const fileOptions = files.map(file => ({
             label: file,
             description: `Modified: ${fs.statSync(path.join(versionDirectory, file)).mtime.toLocaleString()}`
         }));
 
         const pickedFile = await vscode.window.showQuickPick(fileOptions, {
-            placeHolder: 'Select a file version to view details'
+            placeHolder: 'Select a file version to open'
         });
 
         if (pickedFile) {
-            const logDetails = `Listed file version: ${pickedFile.label}`;
-            logAuditData('List File Versions', logDetails);
-            vscode.window.showInformationMessage(`You selected: ${pickedFile.label}`);
+            const selectedFilePath = path.join(versionDirectory, pickedFile.label);
+            const logDetails = `Opened file version: ${pickedFile.label}`;
+            logAuditData('Open File Version', logDetails);
+
+            // Open the selected file in a new tab
+            const document = await vscode.workspace.openTextDocument(selectedFilePath);
+            await vscode.window.showTextDocument(document);
         }
     }
 }
