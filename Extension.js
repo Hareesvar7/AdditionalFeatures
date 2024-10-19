@@ -1,36 +1,29 @@
-// src/Extension.js
-
-const { saveFile, generateReport, logAuditAction } = require('./commands/command');
+const vscode = require('vscode');
+const { saveVersionWithLog, listSavedVersions, generateAuditReport } = require('./command');
 
 function activate(context) {
-    // Example command to save a file
-    let saveFileCommand = {
-        command: 'extension.saveFile',
-        callback: () => {
-            const fileContent = "Your file content here"; // Replace with actual content
-            saveFile(fileContent); // Call the save function
-            logAuditAction('Triggered save file command.'); // Log the command execution
-        },
-    };
+    console.log('Audit log extension with report generation is now active.');
 
-    // Example command to generate a compliance report
-    let generateReportCommand = {
-        command: 'extension.generateReport',
-        callback: () => {
-            const reportContent = "Your report content here"; // Replace with actual report content
-            generateReport(reportContent); // Call the report generation function
-            logAuditAction('Triggered generate report command.'); // Log the command execution
-        },
-    };
+    let saveVersionCommand = vscode.commands.registerCommand('extension.saveVersion', () => {
+        saveVersionWithLog();
+    });
 
-    context.subscriptions.push(saveFileCommand, generateReportCommand);
+    let listVersionsCommand = vscode.commands.registerCommand('extension.listVersions', () => {
+        listSavedVersions();
+    });
+
+    let generateReportCommand = vscode.commands.registerCommand('extension.generateReport', () => {
+        generateAuditReport();
+    });
+
+    context.subscriptions.push(saveVersionCommand);
+    context.subscriptions.push(listVersionsCommand);
+    context.subscriptions.push(generateReportCommand);
 }
 
-function deactivate() {
-    // Clean up if necessary
-}
+function deactivate() {}
 
 module.exports = {
     activate,
-    deactivate,
+    deactivate
 };
