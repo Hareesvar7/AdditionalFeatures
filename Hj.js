@@ -84,3 +84,66 @@ Based on the output and analysis, consider the following recommendations:
 - **Log Entry 2:** Evaluation completed successfully.
     `;
 }
+
+
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+
+function generateReportID() {
+    return `RPT-${Date.now()}`;
+}
+
+// Save the generated report as a PDF
+function saveReport(content) {
+    const pdfFilePath = path.join(reportDirectory, 'opa_eval_report.pdf');
+    const doc = new PDFDocument();
+    const writeStream = fs.createWriteStream(pdfFilePath);
+
+    doc.pipe(writeStream);
+    
+    // Title
+    doc.fontSize(20).text('OPA Evaluation Report', { align: 'center' });
+    doc.moveDown();
+
+    // Report Information
+    doc.fontSize(12).text(`Report ID: ${generateReportID()}`, { align: 'left' });
+    doc.text(`Generated On: ${new Date().toISOString()}`, { align: 'left' });
+    doc.moveDown();
+
+    // Command Executed Section
+    doc.fontSize(14).text('Command Executed:', { underline: true });
+    doc.fontSize(12).text(content.split("**Command Executed:**")[1].split("**Output:**")[0].trim(), { indent: 10 });
+    doc.moveDown();
+
+    // Output Section
+    doc.fontSize(14).text('Output:', { underline: true });
+    doc.fontSize(12).text(content.split("**Output:**")[1].split("**Analysis:**")[0].trim(), { indent: 10 });
+    doc.moveDown();
+
+    // Analysis Section
+    doc.fontSize(14).text('Analysis:', { underline: true });
+    doc.fontSize(12).text('The evaluation results indicate the following insights:', { indent: 10 });
+    doc.moveDown();
+    doc.text('- [Insert analysis based on evalOutput]', { indent: 20 });
+    doc.moveDown();
+
+    // Recommendations Section
+    doc.fontSize(14).text('Recommendations:', { underline: true });
+    doc.fontSize(12).text('Based on the output and analysis, consider the following recommendations:', { indent: 10 });
+    doc.moveDown();
+    doc.text('- [Insert recommendations]', { indent: 20 });
+    doc.moveDown();
+
+    // Additional Notes Section
+    doc.fontSize(14).text('Additional Notes:', { underline: true });
+    doc.fontSize(12).text('- [Insert any additional notes or remarks]', { indent: 10 });
+    doc.moveDown();
+
+    // Finalize the document
+    doc.end();
+
+    writeStream.on('finish', () => {
+        vscode.window.showInformationMessage(`Report generated: ${pdfFilePath}`);
+    });
+}
