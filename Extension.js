@@ -1,24 +1,22 @@
 const vscode = require('vscode');
-const { saveVersionWithLog, listSavedVersions, generateAuditReport } = require('./command');
+const { saveVersion, listSavedVersions, generateReport } = require('./commands');
 
 function activate(context) {
-    console.log('Audit log extension with report generation is now active.');
+    const saveCommand = vscode.commands.registerCommand('extension.saveVersion', saveVersion);
+    const listCommand = vscode.commands.registerCommand('extension.listSavedVersions', listSavedVersions);
+    
+    // Command to run OPA eval and generate a report
+    const evaluateCommand = vscode.commands.registerCommand('extension.evaluateOpa', async () => {
+        // Example dynamic evaluation data; replace this with actual eval data
+        const evaluationData = "OPA Evaluation result: Passed with warnings."; // Replace with actual results
 
-    let saveVersionCommand = vscode.commands.registerCommand('extension.saveVersion', () => {
-        saveVersionWithLog();
+        // Generate a report for the OPA evaluation
+        await generateReport(evaluationData);
     });
 
-    let listVersionsCommand = vscode.commands.registerCommand('extension.listVersions', () => {
-        listSavedVersions();
-    });
-
-    let generateReportCommand = vscode.commands.registerCommand('extension.generateReport', () => {
-        generateAuditReport();
-    });
-
-    context.subscriptions.push(saveVersionCommand);
-    context.subscriptions.push(listVersionsCommand);
-    context.subscriptions.push(generateReportCommand);
+    context.subscriptions.push(saveCommand);
+    context.subscriptions.push(listCommand);
+    context.subscriptions.push(evaluateCommand);
 }
 
 function deactivate() {}
