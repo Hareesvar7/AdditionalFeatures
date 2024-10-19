@@ -1,25 +1,22 @@
 const vscode = require('vscode');
-const { saveVersion, listSavedVersions, generateReport, performOpaEval } = require('./commands');
+const {
+    saveVersionWithLog,
+    listSavedVersions,
+    performOpaEval
+} = require('./commands');
 
+// This method is called when your extension is activated
 function activate(context) {
-    const saveCommand = vscode.commands.registerCommand('extension.saveVersion', saveVersion);
-    const listCommand = vscode.commands.registerCommand('extension.listSavedVersions', listSavedVersions);
-    
-    // Command to run OPA eval and generate a report
-    const evaluateCommand = vscode.commands.registerCommand('extension.evaluateOpa', async () => {
-        const evaluationData = await performOpaEval(); // Call the OPA eval function
+    const saveVersionCommand = vscode.commands.registerCommand('opaPolicyExtension.saveVersion', saveVersionWithLog);
+    const listVersionsCommand = vscode.commands.registerCommand('opaPolicyExtension.listVersions', listSavedVersions);
+    const performEvalCommand = vscode.commands.registerCommand('opaPolicyExtension.performOpaEval', performOpaEval);
 
-        // Generate a report for the OPA evaluation
-        if (evaluationData) {
-            await generateReport(evaluationData);
-        }
-    });
-
-    context.subscriptions.push(saveCommand);
-    context.subscriptions.push(listCommand);
-    context.subscriptions.push(evaluateCommand);
+    context.subscriptions.push(saveVersionCommand);
+    context.subscriptions.push(listVersionsCommand);
+    context.subscriptions.push(performEvalCommand);
 }
 
+// This method is called when your extension is deactivated
 function deactivate() {}
 
 module.exports = {
